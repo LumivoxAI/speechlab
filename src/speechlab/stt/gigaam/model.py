@@ -32,7 +32,7 @@ class GigaAMModel(nn.Module):
         ):
             encoded, encoded_len = self.encoder(features, feature_lengths)
 
-        return self.decoding.decode(self.head, encoded, encoded_len)
+        return self.decoding.decode(self.head, encoded, encoded_len)[0]
 
     def clear(self) -> None:
         self.to("cpu")

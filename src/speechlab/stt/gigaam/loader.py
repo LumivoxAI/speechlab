@@ -7,6 +7,7 @@ from omegaconf.dictconfig import DictConfig
 
 from .model import GigaAMModel
 from .config import GigaAMConfig
+from ...utils.audio import generate_warmup_audio_f32n
 from ...utils.download import download_file
 
 _URL_BASE = "https://cdn.chatwm.opensmodel.sberdevices.ru/GigaAM"
@@ -106,6 +107,10 @@ class GigaAMModelLoader:
 
         return hydra.utils.instantiate(cfg)
 
+    def _warm_up_model(self, model: GigaAMModel) -> None:
+        data = torch.tensor(generate_warmup_audio_f32n(16000, 20), dtype=model._dtype)
+        model.stt(data)
+
     def get_model(self, config: GigaAMConfig) -> GigaAMModel:
         GigaAMConfig.model_validate(config)
 
@@ -132,7 +137,6 @@ class GigaAMModelLoader:
         model = model.eval().to(device)
         model._dtype = next(model.parameters()).dtype
 
-        # TODO: Warmup
-        # _ = model.stt(np.ones((16000 * 5,), dtype=np.float32))
+        self._warm_up_model(model)
 
         return model
