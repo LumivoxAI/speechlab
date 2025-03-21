@@ -4,15 +4,23 @@ from typing import Union
 import torch
 from torch import Tensor, nn
 
-try:
-    from flash_attn import flash_attn_func
 
-    IMPORT_FLASH = True
-except Exception as err:
-    IMPORT_FLASH = False
-    IMPORT_FLASH_ERR = err
+def rtt_half(x: Tensor) -> Tensor:
+    x1, x2 = x[..., : x.shape[-1] // 2], x[..., x.shape[-1] // 2 :]
+    return torch.cat([-x2, x1], dim=x1.ndim - 1)
 
-from .utils import apply_rotary_pos_emb, apply_masked_flash_attn
+
+def apply_rotary_pos_emb(
+    q: Tensor, k: Tensor, cos: Tensor, sin: Tensor, offset: int = 0
+) -> tuple[Tensor, Tensor]:
+    """
+    Applies Rotary Position Embeddings to query and key tensors.
+    """
+    cos, sin = (
+        cos[offset : q.shape[0] + offset, ...],
+        sin[offset : q.shape[0] + offset, ...],
+    )
+    return (q * cos) + (rtt_half(q) * sin), (k * cos) + (rtt_half(k) * sin)
 
 
 class StridingSubsampling(nn.Module):
@@ -75,7 +83,7 @@ class RotaryPositionMultiHeadAttention(nn.Module):
     Rotary Position Multi-Head Attention module.
     """
 
-    def __init__(self, n_head: int, n_feat: int, flash_attn=False) -> None:
+    def __init__(self, n_head: int, n_feat: int) -> None:
         super().__init__()
         assert n_feat % n_head == 0
         self.d_k = n_feat // n_head
@@ -84,14 +92,6 @@ class RotaryPositionMultiHeadAttention(nn.Module):
         self.linear_k = nn.Linear(n_feat, n_feat)
         self.linear_v = nn.Linear(n_feat, n_feat)
         self.linear_out = nn.Linear(n_feat, n_feat)
-        self.flash_attn = flash_attn
-        if self.flash_attn and not IMPORT_FLASH:
-            raise RuntimeError(
-                f"flash_attn_func was imported with err {IMPORT_FLASH_ERR}. "
-                "Please install flash_attn or use --no_flash flag. "
-                "If you have already done this, "
-                "--force-reinstall flag might be useful"
-            )
 
     def forward_qkv(
         self, query: Tensor, key: Tensor, value: Tensor
@@ -103,8 +103,6 @@ class RotaryPositionMultiHeadAttention(nn.Module):
         q = self.linear_q(query).view(b, -1, self.h, self.d_k)
         k = self.linear_k(key).view(b, -1, self.h, self.d_k)
         v = self.linear_v(value).view(b, -1, self.h, self.d_k)
-        if self.flash_attn:
-            return q, k, v
         return q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
 
     def forward_attention(self, value: Tensor, scores: Tensor, mask: Tensor | None) -> Tensor:
@@ -144,17 +142,8 @@ class RotaryPositionMultiHeadAttention(nn.Module):
             value.view(t, b, self.h * self.d_k).transpose(0, 1),
         )
 
-        if not self.flash_attn:
-            scores = torch.matmul(q, k.transpose(-2, -1) / math.sqrt(self.d_k))
-            out = self.forward_attention(v, scores, mask)
-        else:
-            if mask is None:
-                scores = flash_attn_func(q, k, v)
-            else:
-                scores = apply_masked_flash_attn(q, k, v, mask, self.h, self.d_k)
-
-            scores = scores.view(b, -1, self.h * self.d_k)
-            out = self.linear_out(scores)
+        scores = torch.matmul(q, k.transpose(-2, -1) / math.sqrt(self.d_k))
+        out = self.forward_attention(v, scores, mask)
 
         return out
 
@@ -268,7 +257,6 @@ class ConformerLayer(nn.Module):
         d_ff: int,
         n_heads: int = 16,
         conv_kernel_size: int = 31,
-        flash_attn: bool = False,
     ) -> None:
         super().__init__()
         self.fc_factor = 0.5
@@ -283,7 +271,6 @@ class ConformerLayer(nn.Module):
         self.self_attn: nn.Module = RotaryPositionMultiHeadAttention(
             n_head=n_heads,
             n_feat=d_model,
-            flash_attn=flash_attn,
         )
 
         self.norm_feed_forward2 = nn.LayerNorm(d_model)
@@ -337,7 +324,6 @@ class ConformerEncoder(nn.Module):
         n_heads: int = 16,
         pos_emb_max_len: int = 5000,
         conv_kernel_size: int = 31,
-        flash_attn: bool = False,
     ) -> None:
         super().__init__()
         self.feat_in = feat_in
@@ -358,7 +344,6 @@ class ConformerEncoder(nn.Module):
                 d_ff=d_model * ff_expansion_factor,
                 n_heads=n_heads,
                 conv_kernel_size=conv_kernel_size,
-                flash_attn=flash_attn,
             )
             self.layers.append(layer)
 

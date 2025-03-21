@@ -45,7 +45,6 @@ class GigaAMModelLoader:
         self,
         cfg: DictConfig,
         half_encoder: bool,
-        flash_attn: bool,
     ) -> nn.Module:
         """
         cfg = {
@@ -63,8 +62,8 @@ class GigaAMModelLoader:
         }
         """
         cfg["_target_"] = "speechlab.stt.gigaam.encoder.ConformerEncoder"
-        cfg.flash_attn = flash_attn
         del cfg["self_attention_model"]
+        del cfg["flash_attn"]
         encoder = hydra.utils.instantiate(cfg)
         if half_encoder:
             encoder = encoder.half()
@@ -129,7 +128,7 @@ class GigaAMModelLoader:
             torch.backends.cudnn.enabled = True
 
         preprocessor = self._load_preprocessor(ccfg.preprocessor)
-        encoder = self._load_encoder(ccfg.encoder, config.half_encoder, config.flash_attn)
+        encoder = self._load_encoder(ccfg.encoder, config.half_encoder)
         head = self._load_head(ccfg.head)
         decoding = self._load_decoding(ccfg.decoding, tokenizer_path)
 
