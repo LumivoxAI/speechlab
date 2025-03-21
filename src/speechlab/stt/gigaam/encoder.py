@@ -1,5 +1,4 @@
 import math
-from abc import ABC, abstractmethod
 from typing import Union
 
 import torch
@@ -71,9 +70,9 @@ class StridingSubsampling(nn.Module):
         return x, self.calc_output_length(lengths)
 
 
-class MultiHeadAttention(nn.Module, ABC):
+class RotaryPositionMultiHeadAttention(nn.Module):
     """
-    Base class of Multi-Head Attention Mechanisms.
+    Rotary Position Multi-Head Attention module.
     """
 
     def __init__(self, n_head: int, n_feat: int, flash_attn=False) -> None:
@@ -123,51 +122,6 @@ class MultiHeadAttention(nn.Module, ABC):
         x = x.transpose(1, 2).reshape(b, -1, self.h * self.d_k)
         return self.linear_out(x)
 
-
-class RelPositionMultiHeadAttention(MultiHeadAttention):
-    """
-    Relative Position Multi-Head Attention module.
-    """
-
-    def __init__(self, n_head: int, n_feat: int) -> None:
-        super().__init__(n_head, n_feat)
-        self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
-        self.pos_bias_u = nn.Parameter(torch.FloatTensor(self.h, self.d_k))
-        self.pos_bias_v = nn.Parameter(torch.FloatTensor(self.h, self.d_k))
-
-    def rel_shift(self, x: Tensor) -> Tensor:
-        b, h, qlen, pos_len = x.size()
-        x = torch.nn.functional.pad(x, pad=(1, 0))
-        x = x.view(b, h, -1, qlen)
-        return x[:, :, 1:].view(b, h, qlen, pos_len)
-
-    def forward(
-        self,
-        query: Tensor,
-        key: Tensor,
-        value: Tensor,
-        pos_emb: Tensor,
-        mask: Tensor | None = None,
-    ) -> Tensor:
-        q, k, v = self.forward_qkv(query, key, value)
-        q = q.transpose(1, 2)
-        p = self.linear_pos(pos_emb)
-        p = p.view(pos_emb.shape[0], -1, self.h, self.d_k).transpose(1, 2)
-        q_with_bias_u = (q + self.pos_bias_u).transpose(1, 2)
-        q_with_bias_v = (q + self.pos_bias_v).transpose(1, 2)
-        matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
-        matrix_bd = self.rel_shift(matrix_bd)
-        matrix_ac = torch.matmul(q_with_bias_u, k.transpose(-2, -1))
-        matrix_bd = matrix_bd[:, :, :, : matrix_ac.size(-1)]
-        scores = (matrix_ac + matrix_bd) / math.sqrt(self.d_k)
-        return self.forward_attention(v, scores, mask)
-
-
-class RotaryPositionMultiHeadAttention(MultiHeadAttention):
-    """
-    Rotary Position Multi-Head Attention module.
-    """
-
     def forward(
         self,
         query: Tensor,
@@ -205,66 +159,15 @@ class RotaryPositionMultiHeadAttention(MultiHeadAttention):
         return out
 
 
-class PositionalEncoding(nn.Module, ABC):
+class RotaryPositionalEmbedding(nn.Module):
     """
-    Base class of Positional Encodings.
+    Rotary Positional Embedding module.
     """
 
     def __init__(self, dim: int, base: int) -> None:
         super().__init__()
         self.dim = dim
         self.base = base
-
-    @abstractmethod
-    def create_pe(self, length: int, device: torch.device) -> Tensor | None:
-        pass
-
-    def extend_pe(self, length: int, device: torch.device) -> None:
-        """
-        Extends the positional encoding buffer to process longer sequences.
-        """
-        pe = self.create_pe(length, device)
-        if pe is None:
-            return
-        if hasattr(self, "pe"):
-            self.pe = pe
-        else:
-            self.register_buffer("pe", pe, persistent=False)
-
-
-class RelPositionalEmbedding(PositionalEncoding):
-    """
-    Relative Positional Embedding module.
-    """
-
-    def create_pe(self, length: int, device: torch.device) -> Tensor | None:
-        """
-        Creates the relative positional encoding matrix.
-        """
-        if hasattr(self, "pe") and self.pe.shape[1] >= 2 * length - 1:
-            return None
-        positions = torch.arange(length - 1, -length, -1, device=device).unsqueeze(1)
-        pos_length = positions.size(0)
-        pe = torch.zeros(pos_length, self.dim, device=positions.device)
-        div_term = torch.exp(
-            torch.arange(0, self.dim, 2, device=pe.device) * -(math.log(10000.0) / self.dim)
-        )
-        pe[:, 0::2] = torch.sin(positions * div_term)
-        pe[:, 1::2] = torch.cos(positions * div_term)
-        return pe.unsqueeze(0)
-
-    def forward(self, x: torch.Tensor) -> tuple[Tensor, Tensor]:
-        input_len = x.size(1)
-        center_pos = self.pe.size(1) // 2 + 1
-        start_pos = center_pos - input_len
-        end_pos = center_pos + input_len - 1
-        return x, self.pe[:, start_pos:end_pos]
-
-
-class RotaryPositionalEmbedding(PositionalEncoding):
-    """
-    Rotary Positional Embedding module.
-    """
 
     def create_pe(self, length: int, device: torch.device) -> Tensor | None:
         """
@@ -278,6 +181,18 @@ class RotaryPositionalEmbedding(PositionalEncoding):
         freqs = torch.einsum("i,j->ij", t, inv_freq)
         emb = torch.cat((freqs, freqs), dim=-1).to(positions.device)
         return torch.cat([emb.cos()[:, None, None, :], emb.sin()[:, None, None, :]])
+
+    def extend_pe(self, length: int, device: torch.device) -> None:
+        """
+        Extends the positional encoding buffer to process longer sequences.
+        """
+        pe = self.create_pe(length, device)
+        if pe is None:
+            return
+        if hasattr(self, "pe"):
+            self.pe = pe
+        else:
+            self.register_buffer("pe", pe, persistent=False)
 
     def forward(self, x: torch.Tensor) -> tuple[Tensor, list[Tensor]]:
         cos_emb = self.pe[0 : x.shape[1]]
@@ -351,7 +266,6 @@ class ConformerLayer(nn.Module):
         self,
         d_model: int,
         d_ff: int,
-        self_attention_model: str,
         n_heads: int = 16,
         conv_kernel_size: int = 31,
         flash_attn: bool = False,
@@ -366,18 +280,12 @@ class ConformerLayer(nn.Module):
             kernel_size=conv_kernel_size,
         )
         self.norm_self_att = nn.LayerNorm(d_model)
-        if self_attention_model == "rotary":
-            self.self_attn: nn.Module = RotaryPositionMultiHeadAttention(
-                n_head=n_heads,
-                n_feat=d_model,
-                flash_attn=flash_attn,
-            )
-        else:
-            assert not flash_attn, "Not supported flash_attn for rel_pos"
-            self.self_attn = RelPositionMultiHeadAttention(
-                n_head=n_heads,
-                n_feat=d_model,
-            )
+        self.self_attn: nn.Module = RotaryPositionMultiHeadAttention(
+            n_head=n_heads,
+            n_feat=d_model,
+            flash_attn=flash_attn,
+        )
+
         self.norm_feed_forward2 = nn.LayerNorm(d_model)
         self.feed_forward2 = ConformerFeedForward(d_model=d_model, d_ff=d_ff)
         self.norm_out = nn.LayerNorm(d_model)
@@ -426,7 +334,6 @@ class ConformerEncoder(nn.Module):
         d_model: int = 768,
         subsampling_factor: int = 4,
         ff_expansion_factor: int = 4,
-        self_attention_model: str = "rotary",
         n_heads: int = 16,
         pos_emb_max_len: int = 5000,
         conv_kernel_size: int = 31,
@@ -434,10 +341,6 @@ class ConformerEncoder(nn.Module):
     ) -> None:
         super().__init__()
         self.feat_in = feat_in
-        assert self_attention_model in [
-            "rotary",
-            "rel_pos",
-        ], f"Not supported attn = {self_attention_model}"
 
         self.pre_encode = StridingSubsampling(
             subsampling_factor=subsampling_factor,
@@ -446,17 +349,13 @@ class ConformerEncoder(nn.Module):
             conv_channels=d_model,
         )
 
-        if self_attention_model == "rotary":
-            self.pos_enc: nn.Module = RotaryPositionalEmbedding(d_model // n_heads, pos_emb_max_len)
-        else:
-            self.pos_enc = RelPositionalEmbedding(d_model, pos_emb_max_len)
+        self.pos_enc: nn.Module = RotaryPositionalEmbedding(d_model // n_heads, pos_emb_max_len)
 
         self.layers = nn.ModuleList()
         for _ in range(n_layers):
             layer = ConformerLayer(
                 d_model=d_model,
                 d_ff=d_model * ff_expansion_factor,
-                self_attention_model=self_attention_model,
                 n_heads=n_heads,
                 conv_kernel_size=conv_kernel_size,
                 flash_attn=flash_attn,

@@ -64,6 +64,7 @@ class GigaAMModelLoader:
         """
         cfg["_target_"] = "speechlab.stt.gigaam.encoder.ConformerEncoder"
         cfg.flash_attn = flash_attn
+        del cfg["self_attention_model"]
         encoder = hydra.utils.instantiate(cfg)
         if half_encoder:
             encoder = encoder.half()
