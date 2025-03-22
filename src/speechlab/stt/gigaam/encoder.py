@@ -105,17 +105,12 @@ class RotaryPositionMultiHeadAttention(nn.Module):
         v = self.linear_v(value).view(b, -1, self.h, self.d_k)
         return q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
 
-    def forward_attention(self, value: Tensor, scores: Tensor, mask: Tensor | None) -> Tensor:
+    def forward_attention(self, value: Tensor, scores: Tensor) -> Tensor:
         """
         Computes the scaled dot-product attention given the projected values and scores.
         """
         b = value.size(0)
-        if mask is not None:
-            mask = mask.unsqueeze(1)
-            scores = scores.masked_fill(mask, -10000.0)
-            attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)
-        else:
-            attn = torch.softmax(scores, dim=-1)
+        attn = torch.softmax(scores, dim=-1)
         x = torch.matmul(attn, value)
         x = x.transpose(1, 2).reshape(b, -1, self.h * self.d_k)
         return self.linear_out(x)
@@ -126,7 +121,6 @@ class RotaryPositionMultiHeadAttention(nn.Module):
         key: Tensor,
         value: Tensor,
         pos_emb: list[Tensor],
-        mask: Tensor | None = None,
     ) -> Tensor:
         b, t, _ = value.size()
         query = query.transpose(0, 1).view(t, b, self.h, self.d_k)
@@ -143,7 +137,7 @@ class RotaryPositionMultiHeadAttention(nn.Module):
         )
 
         scores = torch.matmul(q, k.transpose(-2, -1) / math.sqrt(self.d_k))
-        out = self.forward_attention(v, scores, mask)
+        out = self.forward_attention(v, scores)
 
         return out
 
@@ -215,12 +209,10 @@ class ConformerConvolution(nn.Module):
         self.activation = nn.SiLU()
         self.pointwise_conv2 = nn.Conv1d(d_model, d_model, kernel_size=1)
 
-    def forward(self, x: Tensor, pad_mask: Tensor | None = None) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         x = x.transpose(1, 2)
         x = self.pointwise_conv1(x)
         x = nn.functional.glu(x, dim=1)
-        if pad_mask is not None:
-            x = x.masked_fill(pad_mask.unsqueeze(1), 0.0)
         x = self.depthwise_conv(x)
         x = self.batch_norm(x)
         x = self.activation(x)
@@ -281,8 +273,6 @@ class ConformerLayer(nn.Module):
         self,
         x: Tensor,
         pos_emb: Union[Tensor, list[Tensor]],
-        att_mask: Tensor | None = None,
-        pad_mask: Tensor | None = None,
     ) -> Tensor:
         residual = x
         x = self.norm_feed_forward1(x)
@@ -290,11 +280,11 @@ class ConformerLayer(nn.Module):
         residual = residual + x * self.fc_factor
 
         x = self.norm_self_att(residual)
-        x = self.self_attn(x, x, x, pos_emb, mask=att_mask)
+        x = self.self_attn(x, x, x, pos_emb)
         residual = residual + x
 
         x = self.norm_conv(residual)
-        x = self.conv(x, pad_mask=pad_mask)
+        x = self.conv(x)
         residual = residual + x
 
         x = self.norm_feed_forward2(residual)
@@ -375,28 +365,12 @@ class ConformerEncoder(nn.Module):
 
     def forward(self, audio_signal: Tensor, length: Tensor) -> tuple[Tensor, Tensor]:
         audio_signal, length = self.pre_encode(x=audio_signal.transpose(1, 2), lengths=length)
-
-        max_len = audio_signal.size(1)
         audio_signal, pos_emb = self.pos_enc(x=audio_signal)
-
-        pad_mask = torch.arange(0, max_len, device=audio_signal.device).expand(
-            length.size(0), -1
-        ) < length.unsqueeze(-1)
-
-        att_mask = None
-        if audio_signal.shape[0] > 1:
-            att_mask = pad_mask.unsqueeze(1).repeat([1, max_len, 1])
-            att_mask = torch.logical_and(att_mask, att_mask.transpose(1, 2))
-            att_mask = ~att_mask
-
-        pad_mask = ~pad_mask
 
         for layer in self.layers:
             audio_signal = layer(
                 x=audio_signal,
                 pos_emb=pos_emb,
-                att_mask=att_mask,
-                pad_mask=pad_mask,
             )
 
         return audio_signal.transpose(1, 2), length
