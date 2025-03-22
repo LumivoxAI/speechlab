@@ -30,9 +30,55 @@ class GigaAMModel(nn.Module):
             dtype=float16,
             enabled=self._autocast,
         ):
-            encoded, encoded_len = self.encoder(features, feature_lengths)
+    def onnx_converter(
+        self,
+        model_name: str,
+        module: nn.Module,
+        root_dir: Path,
+        dynamic_axes: Union[dict[str, list[int]], dict[str, dict[int, str]]] | None = None,
+        opset_version: int | None = None,
+    ) -> None:
+        inputs = module.input_example()
+        input_names = module.input_names()
+        output_names = module.output_names()
+        saved_dtype = next(module.parameters()).dtype
 
-        return self.decoding.decode(self.head, encoded, encoded_len)[0]
+        import warnings
+
+        root_dir.mkdir(exist_ok=True, parents=True)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=(UserWarning, torch.jit.TracerWarning))
+            torch.onnx.export(
+                module.to(torch.float32),
+                inputs,
+                str(root_dir / f"{model_name}.onnx"),
+                input_names=input_names,
+                output_names=output_names,
+                dynamic_axes=dynamic_axes,
+                opset_version=opset_version,
+                do_constant_folding=True,
+                export_params=True,
+            )
+
+        module.to(saved_dtype)
+
+    def to_onnx(self, model_name: str, root_dir: Path) -> None:
+        self.onnx_converter(
+            model_name=f"{model_name}_encoder",
+            module=self.encoder,
+            root_dir=root_dir,
+            dynamic_axes=self.encoder.dynamic_axes(),
+        )
+        self.onnx_converter(
+            model_name=f"{model_name}_decoder",
+            module=self.head.decoder,
+            root_dir=root_dir,
+        )
+        self.onnx_converter(
+            model_name=f"{model_name}_joint",
+            module=self.head.joint,
+            root_dir=root_dir,
+        )
 
     def clear(self) -> None:
         self.to("cpu")
