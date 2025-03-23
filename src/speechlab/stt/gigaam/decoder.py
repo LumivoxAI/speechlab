@@ -83,10 +83,10 @@ class RNNTDecoder(nn.Module):
         return label, hidden_h, hidden_c
 
     def input_names(self) -> list[str]:
-        return ["x", "h", "c"]
+        return ["x", "h_in", "c_in"]
 
     def output_names(self) -> list[str]:
-        return ["dec", "h", "c"]
+        return ["dec", "h_out", "c_out"]
 
     def forward(self, x: Tensor, h: Tensor, c: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         """

@@ -1,3 +1,7 @@
+from typing import Union
+from pathlib import Path
+
+import torch
 from torch import Tensor, nn, full, device, float16, autocast, inference_mode
 
 
@@ -30,6 +34,10 @@ class GigaAMModel(nn.Module):
             dtype=float16,
             enabled=self._autocast,
         ):
+            encoded, encoded_len = self.encoder(features, feature_lengths)
+
+        return self.decoding.decode(self.head, encoded, encoded_len)
+
     def onnx_converter(
         self,
         model_name: str,

@@ -55,8 +55,16 @@ class GigaAMModel:
         self._opts.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
 
         self._encoder = self._load("encoder")
+        assert [node.name for node in self._encoder.get_inputs()] == ["audio_signal", "length"]
+        assert [node.name for node in self._encoder.get_outputs()] == ["encoded", "encoded_len"]
+
         self._decoder = self._load("decoder")
+        assert [node.name for node in self._decoder.get_inputs()] == ["x", "h_in", "c_in"]
+        assert [node.name for node in self._decoder.get_outputs()] == ["dec", "h_out", "c_out"]
+
         self._joint = self._load("joint")
+        assert [node.name for node in self._joint.get_inputs()] == ["enc", "dec"]
+        assert [node.name for node in self._joint.get_outputs()] == ["joint"]
 
     def _load(self, component: str) -> rt.InferenceSession:
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
@@ -69,15 +77,13 @@ class GigaAMModel:
 
     def stt(self, input_signal: np.array) -> str:
         pinput_signal = self._preprocessor(input_signal)
-        enc_inputs = {
-            node.name: data
-            for (node, data) in zip(
-                self._encoder.get_inputs(),
-                [pinput_signal.astype(_DTYPE), [pinput_signal.shape[-1]]],
-            )
+
+        encoder_inputs = {
+            "audio_signal": pinput_signal.astype(_DTYPE),
+            "length": [pinput_signal.shape[-1]],
         }
-        output_names = [node.name for node in self._encoder.get_outputs()]
-        enc_features = self._encoder.run(output_names, enc_inputs)[0]
+        encoder_outputs = ["encoded"]
+        enc_features = self._encoder.run(encoder_outputs, encoder_inputs)[0]
 
         token_ids = []
         prev_token = _BLANK_IDX
@@ -86,30 +92,30 @@ class GigaAMModel:
             np.zeros(shape=(1, 1, _PRED_HIDDEN), dtype=_DTYPE),
             np.zeros(shape=(1, 1, _PRED_HIDDEN), dtype=_DTYPE),
         ]
-        pred_sess = self._decoder
-        joint_sess = self._joint
+        decoder = self._decoder
+        decoder_outputs = ["dec", "h_out", "c_out"]
+
+        joint = self._joint
+        joint_outputs = ["joint"]
+
         for j in range(enc_features.shape[-1]):
             emitted_letters = 0
             while emitted_letters < _MAX_LETTERS_PER_FRAME:
-                pred_inputs = {
-                    node.name: data
-                    for (node, data) in zip(pred_sess.get_inputs(), [[[prev_token]]] + pred_states)
+                decoder_inputs = {
+                    "x": [[prev_token]],
+                    "h_in": pred_states[0],
+                    "c_in": pred_states[1],
                 }
-                pred_outputs = pred_sess.run(
-                    [node.name for node in pred_sess.get_outputs()], pred_inputs
-                )
+
+                pred_outputs = decoder.run(decoder_outputs, decoder_inputs)
 
                 joint_inputs = {
-                    node.name: data
-                    for node, data in zip(
-                        joint_sess.get_inputs(),
-                        [enc_features[:, :, [j]], pred_outputs[0].swapaxes(1, 2)],
-                    )
+                    "enc": enc_features[:, :, [j]],
+                    "dec": pred_outputs[0].swapaxes(1, 2),
                 }
-                log_probs = joint_sess.run(
-                    [node.name for node in joint_sess.get_outputs()], joint_inputs
-                )
-                token = int(log_probs[0].argmax(-1)[0][0][0])
+
+                log_probs = joint.run(joint_outputs, joint_inputs)[0]
+                token = int(log_probs.argmax(-1)[0][0][0])
 
                 if token != _BLANK_IDX:
                     prev_token = token
