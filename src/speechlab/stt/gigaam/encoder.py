@@ -338,6 +338,7 @@ class ConformerEncoder(nn.Module):
             self.layers.append(layer)
 
         self.pos_enc.extend_pe(pos_emb_max_len, next(self.parameters()).device)
+        self.joint_enc = None  # RNNTJoint.enc
 
     def input_example(
         self,
@@ -359,7 +360,7 @@ class ConformerEncoder(nn.Module):
         return {
             "audio_signal": {0: "batch_size", 2: "seq_len"},
             "length": {0: "batch_size"},
-            "encoded": {0: "batch_size", 1: "seq_len"},
+            "encoded": {0: "seq_len"},
             "encoded_len": {0: "batch_size"},
         }
 
@@ -373,4 +374,5 @@ class ConformerEncoder(nn.Module):
                 pos_emb=pos_emb,
             )
 
-        return audio_signal.transpose(1, 2), length
+        enc_proj = self.joint_enc(audio_signal[0])
+        return enc_proj, length

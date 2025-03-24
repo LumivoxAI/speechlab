@@ -133,7 +133,9 @@ class GigaAMModelLoader:
         decoding = self._load_decoding(ccfg.decoding, tokenizer_path)
 
         model = GigaAMModel(preprocessor, encoder, head, decoding, device)
-        model.load_state_dict(checkpoint["state_dict"], strict=False)
+        model.load_state_dict(checkpoint["state_dict"], strict=True)
+        model.init()
+
         model = model.eval().to(device)
         model._dtype = next(model.parameters()).dtype
 

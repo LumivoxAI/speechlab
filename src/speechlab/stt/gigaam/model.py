@@ -23,6 +23,11 @@ class GigaAMModel(nn.Module):
         self._device = device
         self._autocast = self._device.type != "cpu"
 
+    def init(self) -> None:
+        self.encoder.joint_enc = self.head.joint.enc
+        self.head.joint.enc = None
+        self.head.init()
+
     @inference_mode()
     def stt(self, data: Tensor) -> str:
         tdata = data.to(device=self._device).unsqueeze(0)
@@ -34,9 +39,10 @@ class GigaAMModel(nn.Module):
             dtype=float16,
             enabled=self._autocast,
         ):
-            encoded, encoded_len = self.encoder(features, feature_lengths)
+            enc_proj, _ = self.encoder(features, feature_lengths)
 
-        return self.decoding.decode(self.head, encoded, encoded_len)
+        tokens = self.head(enc_proj).tolist()
+        return self.decoding.tokenizer.decode(tokens)
 
     def onnx_converter(
         self,
@@ -80,11 +86,6 @@ class GigaAMModel(nn.Module):
         self.onnx_converter(
             model_name=f"{model_name}_decoder",
             module=self.head.decoder,
-            root_dir=root_dir,
-        )
-        self.onnx_converter(
-            model_name=f"{model_name}_joint",
-            module=self.head.joint,
             root_dir=root_dir,
         )
 
