@@ -59,12 +59,8 @@ class GigaAMModel:
         assert [node.name for node in self._encoder.get_outputs()] == ["encoded", "encoded_len"]
 
         self._decoder = self._load("decoder")
-        assert [node.name for node in self._decoder.get_inputs()] == ["x", "h_in", "c_in"]
+        assert [node.name for node in self._decoder.get_inputs()] == ["x", "line", "h_in", "c_in"]
         assert [node.name for node in self._decoder.get_outputs()] == ["dec", "h_out", "c_out"]
-
-        self._joint = self._load("joint")
-        assert [node.name for node in self._joint.get_inputs()] == ["enc", "dec"]
-        assert [node.name for node in self._joint.get_outputs()] == ["joint"]
 
     def _load(self, component: str) -> rt.InferenceSession:
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
@@ -83,43 +79,34 @@ class GigaAMModel:
             "length": [pinput_signal.shape[-1]],
         }
         encoder_outputs = ["encoded"]
-        enc_features = self._encoder.run(encoder_outputs, encoder_inputs)[0]
+        enc_proj = self._encoder.run(encoder_outputs, encoder_inputs)[0]
 
         token_ids = []
-        prev_token = _BLANK_IDX
+        prev_token = np.int64(_BLANK_IDX)
 
         pred_states = [
-            np.zeros(shape=(1, 1, _PRED_HIDDEN), dtype=_DTYPE),
-            np.zeros(shape=(1, 1, _PRED_HIDDEN), dtype=_DTYPE),
+            np.zeros(shape=(1, _PRED_HIDDEN), dtype=_DTYPE),
+            np.zeros(shape=(1, _PRED_HIDDEN), dtype=_DTYPE),
         ]
         decoder = self._decoder
         decoder_outputs = ["dec", "h_out", "c_out"]
 
-        joint = self._joint
-        joint_outputs = ["joint"]
-
-        for j in range(enc_features.shape[-1]):
+        for j in range(enc_proj.shape[0]):
             emitted_letters = 0
             while emitted_letters < _MAX_LETTERS_PER_FRAME:
                 decoder_inputs = {
-                    "x": [[prev_token]],
+                    "x": np.array(prev_token, dtype=np.int64),
+                    "line": enc_proj[j],
                     "h_in": pred_states[0],
                     "c_in": pred_states[1],
                 }
 
-                pred_outputs = decoder.run(decoder_outputs, decoder_inputs)
-
-                joint_inputs = {
-                    "enc": enc_features[:, :, [j]],
-                    "dec": pred_outputs[0].swapaxes(1, 2),
-                }
-
-                log_probs = joint.run(joint_outputs, joint_inputs)[0]
-                token = int(log_probs.argmax(-1)[0][0][0])
+                token, h_out, c_out = decoder.run(decoder_outputs, decoder_inputs)
 
                 if token != _BLANK_IDX:
                     prev_token = token
-                    pred_states = pred_outputs[1:]
+                    pred_states[0] = h_out
+                    pred_states[1] = c_out
                     token_ids.append(token)
                     emitted_letters += 1
                 else:
