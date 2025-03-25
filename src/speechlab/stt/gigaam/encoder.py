@@ -45,7 +45,7 @@ class StridingSubsampling(nn.Module):
         in_channels = 1
         for _ in range(self._sampling_num):
             layers.append(
-                torch.nn.Conv2d(
+                nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=conv_channels,
                     kernel_size=self._kernel_size,
@@ -57,8 +57,8 @@ class StridingSubsampling(nn.Module):
             in_channels = conv_channels
 
         out_length = self.calc_output_length(torch.tensor(feat_in))
-        self.out = torch.nn.Linear(conv_channels * int(out_length), feat_out)
-        self.conv = torch.nn.Sequential(*layers)
+        self.out = nn.Linear(conv_channels * int(out_length), feat_out)
+        self.conv = nn.Sequential(*layers)
 
     def calc_output_length(self, lengths: Tensor) -> Tensor:
         """
@@ -71,11 +71,10 @@ class StridingSubsampling(nn.Module):
             lengths = torch.floor(lengths)
         return lengths.to(dtype=torch.int)
 
-    def forward(self, x: Tensor, lengths: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(self, x: Tensor) -> Tensor:
         x = self.conv(x.unsqueeze(1))
         b, _, t, _ = x.size()
-        x = self.out(x.transpose(1, 2).reshape(b, t, -1))
-        return x, self.calc_output_length(lengths)
+        return self.out(x.transpose(1, 2).reshape(b, t, -1))
 
 
 class RotaryPositionMultiHeadAttention(nn.Module):
@@ -347,25 +346,22 @@ class ConformerEncoder(nn.Module):
     ) -> tuple[Tensor, Tensor]:
         device = next(self.parameters()).device
         features = torch.zeros(batch_size, self.feat_in, seqlen)
-        feature_lengths = torch.full([batch_size], features.shape[-1])
-        return features.float().to(device), feature_lengths.to(device)
+        return features.float().to(device)
 
     def input_names(self) -> list[str]:
-        return ["audio_signal", "length"]
+        return ["audio_signal"]
 
     def output_names(self) -> list[str]:
-        return ["encoded", "encoded_len"]
+        return ["encoded_proj"]
 
     def dynamic_axes(self) -> dict[str, dict[int, str]]:
         return {
             "audio_signal": {0: "batch_size", 2: "seq_len"},
-            "length": {0: "batch_size"},
-            "encoded": {0: "seq_len"},
-            "encoded_len": {0: "batch_size"},
+            "encoded_proj": {0: "seq_len"},
         }
 
-    def forward(self, audio_signal: Tensor, length: Tensor) -> tuple[Tensor, Tensor]:
-        audio_signal, length = self.pre_encode(x=audio_signal.transpose(1, 2), lengths=length)
+    def forward(self, audio_signal: Tensor) -> tuple[Tensor, Tensor]:
+        audio_signal = self.pre_encode(x=audio_signal.transpose(1, 2))
         audio_signal, pos_emb = self.pos_enc(x=audio_signal)
 
         for layer in self.layers:
@@ -374,5 +370,4 @@ class ConformerEncoder(nn.Module):
                 pos_emb=pos_emb,
             )
 
-        enc_proj = self.joint_enc(audio_signal[0])
-        return enc_proj, length
+        return self.joint_enc(audio_signal[0])

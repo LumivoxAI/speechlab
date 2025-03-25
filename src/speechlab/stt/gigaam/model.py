@@ -31,15 +31,13 @@ class GigaAMModel(nn.Module):
     @inference_mode()
     def stt(self, data: Tensor) -> str:
         tdata = data.to(device=self._device).unsqueeze(0)
-        tlength = full([1], tdata.shape[-1], device=self._device)
-
-        features, feature_lengths = self.preprocessor(tdata, tlength)
+        features = self.preprocessor(tdata)
         with autocast(
             device_type=self._device.type,
             dtype=float16,
             enabled=self._autocast,
         ):
-            enc_proj, _ = self.encoder(features, feature_lengths)
+            enc_proj = self.encoder(features)
 
         tokens = self.head(enc_proj).tolist()
         return self.decoding.tokenizer.decode(tokens)

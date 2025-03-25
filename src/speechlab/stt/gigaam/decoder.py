@@ -34,29 +34,29 @@ class RNNTDecoder(nn.Module):
     def forward(
         self,
         x: Tensor,
-        enc_proj_line: Tensor,
+        token: Tensor,
         h: Tensor,
         c: Tensor,
     ) -> tuple[Tensor, Tensor, Tensor]:
-        emb: Tensor = self.embed(x)
+        emb: Tensor = self.embed(token)
         g, (h, c) = self.lstm(emb.unsqueeze(0), (h, c))
         pred_proj = self.pred(g[0])
-        joint_out = self.joint_net(enc_proj_line + pred_proj)
+        joint_out = self.joint_net(x + pred_proj)
         return joint_out.argmax(dim=-1), h, c
 
     def input_example(self) -> tuple[Tensor]:
         device = next(self.parameters()).device
-        label = torch.tensor(0).to(device)
-        line = torch.zeros(self.pred_hidden).to(device)
+        x = torch.zeros(self.pred_hidden).to(device)
+        token = torch.tensor(0).to(device)
         hidden_h = torch.zeros(1, self.pred_hidden).to(device)
         hidden_c = torch.zeros(1, self.pred_hidden).to(device)
-        return label, line, hidden_h, hidden_c
+        return x, token, hidden_h, hidden_c
 
     def input_names(self) -> list[str]:
-        return ["x", "line", "h_in", "c_in"]
+        return ["x", "token_in", "h_in", "c_in"]
 
     def output_names(self) -> list[str]:
-        return ["dec", "h_out", "c_out"]
+        return ["token_out", "h_out", "c_out"]
 
 
 class RNNTHead(nn.Module):
@@ -80,13 +80,13 @@ class RNNTHead(nn.Module):
         hyp_idx = 0
 
         pred_hidden = 320  # RNNTDecoder.pred_hidden
-        state_h = torch.zeros(
+        h = torch.zeros(
             1,
             pred_hidden,
             dtype=dtype,
             device=device,
         )
-        state_c = torch.zeros(
+        c = torch.zeros(
             1,
             pred_hidden,
             dtype=dtype,
@@ -94,20 +94,20 @@ class RNNTHead(nn.Module):
         )
 
         blank_id = torch.tensor(self.blank_id, device=device)
-        last_label = blank_id
+        token = blank_id
         decoder = self.decoder
 
         for t in range(tsize):
-            f = enc_proj[t]  # [pred_hidden]
+            x = enc_proj[t]  # [pred_hidden]
             for _ in range(self.max_symbols):
-                k, new_h, new_c = decoder(last_label, f, state_h, state_c)
-                if k == blank_id:
+                new_token, new_h, new_c = decoder(x, token, h, c)
+                if new_token == blank_id:
                     break
 
-                hyp[hyp_idx] = k
+                hyp[hyp_idx] = new_token
                 hyp_idx += 1
-                state_h = new_h
-                state_c = new_c
-                last_label = k
+                h = new_h
+                c = new_c
+                token = new_token
 
         return hyp[:hyp_idx]
