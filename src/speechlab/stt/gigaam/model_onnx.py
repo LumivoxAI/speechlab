@@ -55,12 +55,23 @@ class GigaAMModel:
         self._opts.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
 
         self._encoder = self._load("encoder")
-        assert [node.name for node in self._encoder.get_inputs()] == ["audio_signal", "length"]
-        assert [node.name for node in self._encoder.get_outputs()] == ["encoded", "encoded_len"]
+        assert [node.name for node in self._encoder.get_inputs()] == ["audio_signal"]
+        assert [node.name for node in self._encoder.get_outputs()] == ["encoded_proj"]
 
         self._decoder = self._load("decoder")
-        assert [node.name for node in self._decoder.get_inputs()] == ["x", "line", "h_in", "c_in"]
-        assert [node.name for node in self._decoder.get_outputs()] == ["dec", "h_out", "c_out"]
+        assert [node.name for node in self._decoder.get_inputs()] == [
+            "x",
+            "token_in",
+            "h_in",
+            "c_in",
+        ]
+        assert [node.name for node in self._decoder.get_outputs()] == [
+            "token_out",
+            "h_out",
+            "c_out",
+        ]
+
+        self._init_hc = np.zeros(shape=(1, _PRED_HIDDEN), dtype=_DTYPE)
 
     def _load(self, component: str) -> rt.InferenceSession:
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
@@ -72,43 +83,29 @@ class GigaAMModel:
         )
 
     def stt(self, input_signal: np.array) -> str:
-        pinput_signal = self._preprocessor(input_signal)
+        audio_signal = self._preprocessor(input_signal).astype(_DTYPE)
 
-        encoder_inputs = {
-            "audio_signal": pinput_signal.astype(_DTYPE),
-            "length": [pinput_signal.shape[-1]],
-        }
-        encoder_outputs = ["encoded"]
-        enc_proj = self._encoder.run(encoder_outputs, encoder_inputs)[0]
-
+        encoder_inputs = {"audio_signal": audio_signal}
+        encoded_proj = self._encoder.run(["encoded_proj"], encoder_inputs)[0]
         token_ids = []
-        prev_token = np.int64(_BLANK_IDX)
 
-        pred_states = [
-            np.zeros(shape=(1, _PRED_HIDDEN), dtype=_DTYPE),
-            np.zeros(shape=(1, _PRED_HIDDEN), dtype=_DTYPE),
-        ]
         decoder = self._decoder
-        decoder_outputs = ["dec", "h_out", "c_out"]
+        d_outputs = ["token_out", "h_out", "c_out"]
+        d_inputs = {
+            "token_in": np.array(_BLANK_IDX, dtype=np.int64),
+            "h_in": self._init_hc,
+            "c_in": self._init_hc,
+        }
 
-        for j in range(enc_proj.shape[0]):
-            emitted_letters = 0
-            while emitted_letters < _MAX_LETTERS_PER_FRAME:
-                decoder_inputs = {
-                    "x": np.array(prev_token, dtype=np.int64),
-                    "line": enc_proj[j],
-                    "h_in": pred_states[0],
-                    "c_in": pred_states[1],
-                }
-
-                token, h_out, c_out = decoder.run(decoder_outputs, decoder_inputs)
+        for d_inputs["x"] in encoded_proj:
+            for _ in range(_MAX_LETTERS_PER_FRAME):
+                token, h, c = decoder.run(d_outputs, d_inputs)
 
                 if token != _BLANK_IDX:
-                    prev_token = token
-                    pred_states[0] = h_out
-                    pred_states[1] = c_out
+                    d_inputs["token_in"] = token
+                    d_inputs["h_in"] = h
+                    d_inputs["c_in"] = c
                     token_ids.append(token)
-                    emitted_letters += 1
                 else:
                     break
 
