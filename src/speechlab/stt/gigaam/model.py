@@ -4,13 +4,13 @@ from pathlib import Path
 import torch
 from torch import Tensor, nn, device, float16, autocast, inference_mode
 
-from .preprocess import TorchMelSpectrogram
+from .mel_spectrogram.torch import MelSpectrogram
 
 
 class GigaAMModel(nn.Module):
     def __init__(
         self,
-        preprocessor: TorchMelSpectrogram,
+        preprocessor: MelSpectrogram,
         encoder: nn.Module,
         head: nn.Module,
         decoding: nn.Module,

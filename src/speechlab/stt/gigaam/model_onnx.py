@@ -1,3 +1,4 @@
+from typing import Callable
 from pathlib import Path
 
 import numpy as np
@@ -45,7 +46,12 @@ _VOCAB = [
 
 
 class GigaAMModel:
-    def __init__(self, base_dir: Path, model_name: str, preprocessor) -> None:
+    def __init__(
+        self,
+        base_dir: Path,
+        model_name: str,
+        preprocessor: Callable,
+    ) -> None:
         self._base_dir = base_dir
         self._model_name = model_name
         self._preprocessor = preprocessor

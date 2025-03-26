@@ -7,9 +7,9 @@ from omegaconf.dictconfig import DictConfig
 
 from .model import GigaAMModel
 from .config import GigaAMConfig
-from .preprocess import TorchMelSpectrogram
 from ...utils.audio import generate_warmup_audio_f32n
 from ...utils.download import download_file
+from .mel_spectrogram.torch import MelSpectrogram
 
 _URL_BASE = "https://cdn.chatwm.opensmodel.sberdevices.ru/GigaAM"
 
@@ -31,7 +31,7 @@ class GigaAMModelLoader:
 
         return model_path, tokenizer_path
 
-    def _load_preprocessor(self, cfg: DictConfig) -> TorchMelSpectrogram:
+    def _load_preprocessor(self, cfg: DictConfig) -> MelSpectrogram:
         """
         cfg = {
             '_target_': 'speechlab.stt.gigaam.preprocess.FeatureExtractor',
@@ -41,7 +41,7 @@ class GigaAMModelLoader:
         """
         assert cfg.sample_rate == 16000
         assert cfg.features == 64
-        return TorchMelSpectrogram(samplerate=16000, features=64)
+        return MelSpectrogram()
 
     def _load_encoder(
         self,
