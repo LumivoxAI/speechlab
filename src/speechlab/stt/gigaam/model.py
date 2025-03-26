@@ -2,13 +2,15 @@ from typing import Union
 from pathlib import Path
 
 import torch
-from torch import Tensor, nn, full, device, float16, autocast, inference_mode
+from torch import Tensor, nn, device, float16, autocast, inference_mode
+
+from .preprocess import TorchMelSpectrogram
 
 
 class GigaAMModel(nn.Module):
     def __init__(
         self,
-        preprocessor: nn.Module,
+        preprocessor: TorchMelSpectrogram,
         encoder: nn.Module,
         head: nn.Module,
         decoding: nn.Module,
@@ -16,7 +18,7 @@ class GigaAMModel(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.preprocessor = preprocessor
+        self._preprocessor = preprocessor
         self.encoder = encoder
         self.head = head
         self.decoding = decoding
@@ -24,14 +26,14 @@ class GigaAMModel(nn.Module):
         self._autocast = self._device.type != "cpu"
 
     def init(self) -> None:
+        self._dtype = next(self.parameters()).dtype
         self.encoder.joint_enc = self.head.joint.enc
         self.head.joint.enc = None
         self.head.init()
 
     @inference_mode()
     def stt(self, data: Tensor) -> str:
-        tdata = data.to(device=self._device).unsqueeze(0)
-        features = self.preprocessor(tdata)
+        features = self._preprocessor(data.to(self._device))
         with autocast(
             device_type=self._device.type,
             dtype=float16,

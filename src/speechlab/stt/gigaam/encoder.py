@@ -30,10 +30,10 @@ class StridingSubsampling(nn.Module):
 
     def __init__(
         self,
-        subsampling_factor: int,
-        feat_in: int,
-        feat_out: int,
-        conv_channels: int,
+        subsampling_factor: int = 4,
+        feat_in: int = 64,
+        feat_out: int = 768,
+        conv_channels: int = 768,
     ) -> None:
         super().__init__()
         self._sampling_num = int(math.log(subsampling_factor, 2))
@@ -56,25 +56,23 @@ class StridingSubsampling(nn.Module):
             layers.append(nn.ReLU())
             in_channels = conv_channels
 
-        out_length = self.calc_output_length(torch.tensor(feat_in))
-        self.out = nn.Linear(conv_channels * int(out_length), feat_out)
+        out_length = self.calc_output_length(feat_in)
+        self.out = nn.Linear(conv_channels * out_length, feat_out)
         self.conv = nn.Sequential(*layers)
 
-    def calc_output_length(self, lengths: Tensor) -> Tensor:
-        """
-        Calculates the output length after applying the subsampling.
-        """
-        lengths = lengths.to(torch.float)
+    def calc_output_length(self, length: int) -> int:
         add_pad = 2 * self._padding - self._kernel_size
         for _ in range(self._sampling_num):
-            lengths = torch.div(lengths + add_pad, self._stride) + 1.0
-            lengths = torch.floor(lengths)
-        return lengths.to(dtype=torch.int)
+            length = int((length + add_pad) / self._stride) + 1
+            length = math.floor(length)
+        return int(length)
 
     def forward(self, x: Tensor) -> Tensor:
-        x = self.conv(x.unsqueeze(1))
-        b, _, t, _ = x.size()
-        return self.out(x.transpose(1, 2).reshape(b, t, -1))
+        x = x.transpose(0, 1).unsqueeze(0).unsqueeze(0)
+        x = self.conv(x)
+        t = x.size(dim=2)
+        x = x.transpose(1, 2).reshape(1, t, -1)
+        return self.out(x)
 
 
 class RotaryPositionMultiHeadAttention(nn.Module):
@@ -341,12 +339,10 @@ class ConformerEncoder(nn.Module):
 
     def input_example(
         self,
-        batch_size: int = 1,
         seqlen: int = 200,
     ) -> tuple[Tensor, Tensor]:
         device = next(self.parameters()).device
-        features = torch.zeros(batch_size, self.feat_in, seqlen)
-        return features.float().to(device)
+        return torch.zeros(self.feat_in, seqlen).float().to(device)
 
     def input_names(self) -> list[str]:
         return ["audio_signal"]
@@ -356,18 +352,16 @@ class ConformerEncoder(nn.Module):
 
     def dynamic_axes(self) -> dict[str, dict[int, str]]:
         return {
-            "audio_signal": {0: "batch_size", 2: "seq_len"},
+            "audio_signal": {1: "seq_len"},
             "encoded_proj": {0: "seq_len"},
         }
 
-    def forward(self, audio_signal: Tensor) -> tuple[Tensor, Tensor]:
-        audio_signal = self.pre_encode(x=audio_signal.transpose(1, 2))
+    def forward(self, audio_signal: Tensor) -> Tensor:
+        audio_signal = torch.log(audio_signal.clamp_(1e-9, 1e9))
+        audio_signal = self.pre_encode(audio_signal)
         audio_signal, pos_emb = self.pos_enc(x=audio_signal)
 
         for layer in self.layers:
-            audio_signal = layer(
-                x=audio_signal,
-                pos_emb=pos_emb,
-            )
+            audio_signal = layer(audio_signal, pos_emb)
 
         return self.joint_enc(audio_signal[0])

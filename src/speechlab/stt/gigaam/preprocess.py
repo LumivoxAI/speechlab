@@ -1,25 +1,16 @@
-from torch import Tensor, nn, log
+from torch import Tensor, nn
 from torchaudio.transforms import MelSpectrogram
 
 
-class SpecScaler(nn.Module):
-    def forward(self, x: Tensor) -> Tensor:
-        return log(x.clamp_(1e-9, 1e9))
-
-
-class FeatureExtractor(nn.Module):
-    def __init__(self, sample_rate: int, features: int) -> None:
+class TorchMelSpectrogram(nn.Module):
+    def __init__(self, samplerate: int = 16000, features: int = 64) -> None:
         super().__init__()
-        self.hop_length = sample_rate // 100
-        self.featurizer = nn.Sequential(
-            MelSpectrogram(
-                sample_rate=sample_rate,
-                n_fft=sample_rate // 40,
-                win_length=sample_rate // 40,
-                hop_length=self.hop_length,
-                n_mels=features,
-            ),
-            SpecScaler(),
+        self.featurizer = MelSpectrogram(
+            sample_rate=samplerate,
+            n_fft=samplerate // 40,
+            win_length=samplerate // 40,
+            hop_length=samplerate // 100,
+            n_mels=features,
         )
 
     def forward(self, input_signal: Tensor) -> Tensor:

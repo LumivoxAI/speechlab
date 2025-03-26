@@ -7,6 +7,7 @@ from omegaconf.dictconfig import DictConfig
 
 from .model import GigaAMModel
 from .config import GigaAMConfig
+from .preprocess import TorchMelSpectrogram
 from ...utils.audio import generate_warmup_audio_f32n
 from ...utils.download import download_file
 
@@ -30,7 +31,7 @@ class GigaAMModelLoader:
 
         return model_path, tokenizer_path
 
-    def _load_preprocessor(self, cfg: DictConfig) -> nn.Module:
+    def _load_preprocessor(self, cfg: DictConfig) -> TorchMelSpectrogram:
         """
         cfg = {
             '_target_': 'speechlab.stt.gigaam.preprocess.FeatureExtractor',
@@ -38,8 +39,9 @@ class GigaAMModelLoader:
             'features': 64,
         }
         """
-        cfg["_target_"] = "speechlab.stt.gigaam.preprocess.FeatureExtractor"
-        return hydra.utils.instantiate(cfg)
+        assert cfg.sample_rate == 16000
+        assert cfg.features == 64
+        return TorchMelSpectrogram(samplerate=16000, features=64)
 
     def _load_encoder(
         self,
@@ -133,11 +135,22 @@ class GigaAMModelLoader:
         decoding = self._load_decoding(ccfg.decoding, tokenizer_path)
 
         model = GigaAMModel(preprocessor, encoder, head, decoding, device)
-        model.load_state_dict(checkpoint["state_dict"], strict=True)
+        model.load_state_dict(checkpoint["state_dict"], strict=False)
         model.init()
-
         model = model.eval().to(device)
-        model._dtype = next(model.parameters()).dtype
+
+        if config.compile:
+            model.encoder = torch.compile(
+                model.encoder,
+                backend="inductor",
+                mode="default",
+                fullgraph=True,
+            )
+            model.head = torch.compile(
+                model.head,
+                backend="aot_eager",
+                dynamic=True,
+            )
 
         self._warm_up_model(model)
 

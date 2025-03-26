@@ -17,6 +17,7 @@ class GigaAMConfig(BaseModel):
     device: DeviceOption = DeviceOption.CUDA
     model: ModelOption = ModelOption.RNNT_V2
     half_encoder: bool = True
+    compile: bool = False  # `pip install triton``
 
     @model_validator(mode="after")
     def validate_options(self) -> Self:
