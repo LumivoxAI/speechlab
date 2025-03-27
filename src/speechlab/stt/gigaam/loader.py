@@ -2,7 +2,6 @@ from pathlib import Path
 
 import hydra
 import torch
-from torch import nn
 from omegaconf.dictconfig import DictConfig
 
 from .model import GigaAMModel
@@ -47,7 +46,7 @@ class GigaAMModelLoader:
         self,
         cfg: DictConfig,
         half_encoder: bool,
-    ) -> nn.Module:
+    ) -> torch.nn.Module:
         """
         cfg = {
             '_target_': 'speechlab.stt.gigaam.encoder.ConformerEncoder',
@@ -72,7 +71,7 @@ class GigaAMModelLoader:
 
         return encoder
 
-    def _load_head(self, cfg: DictConfig) -> nn.Module:
+    def _load_head(self, cfg: DictConfig) -> torch.nn.Module:
         """
         cfg = {
             '_target_': 'speechlab.stt.gigaam.decoder.RNNTHead',
@@ -96,7 +95,7 @@ class GigaAMModelLoader:
         self,
         cfg: DictConfig,
         tokenizer_path: str | Path | None,
-    ) -> nn.Module:
+    ) -> torch.nn.Module:
         """
         cfg = {
             '_target_': 'speechlab.stt.gigaam.decoding.RNNTGreedyDecoding',
