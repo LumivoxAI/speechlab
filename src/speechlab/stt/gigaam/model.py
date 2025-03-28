@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 from torch import Tensor, nn, device, float16, autocast, inference_mode
 
+from .tokenizer import Tokenizer
 from .mel_spectrogram.torch import MelSpectrogram
 
 
@@ -13,7 +14,6 @@ class GigaAMModel(nn.Module):
         preprocessor: MelSpectrogram,
         encoder: nn.Module,
         head: nn.Module,
-        decoding: nn.Module,
         device: device,
     ) -> None:
         super().__init__()
@@ -21,7 +21,7 @@ class GigaAMModel(nn.Module):
         self._preprocessor = preprocessor
         self.encoder = encoder
         self.head = head
-        self.decoding = decoding
+        self._tokenizer = Tokenizer()
         self._device = device
         self._autocast = self._device.type != "cpu"
 
@@ -42,7 +42,7 @@ class GigaAMModel(nn.Module):
             enc_proj = self.encoder(features)
 
         tokens = self.head(enc_proj).tolist()
-        return self.decoding.tokenizer.decode(tokens)
+        return self._tokenizer(tokens)
 
     def onnx_converter(
         self,

@@ -20,15 +20,13 @@ class GigaAMModelLoader:
             "v2_rnnt.ckpt": "3d5674d8b59813d455e34c8ce1c5a7ca4da63fa0f32bcd32b1c37a1224d17b8b",
         }
 
-    def _download(self, model_name: str) -> tuple[Path, Path | None]:
+    def _download(self, model_name: str) -> Path:
         model_file_name = model_name + ".ckpt"
         model_url = f"{_URL_BASE}/{model_file_name}"
         model_path = self._root_dir / model_file_name
         download_file(model_url, model_path, self._hashes[model_file_name])
 
-        tokenizer_path = None
-
-        return model_path, tokenizer_path
+        return model_path
 
     def _load_preprocessor(self, cfg: DictConfig) -> MelSpectrogram:
         """
@@ -91,22 +89,17 @@ class GigaAMModelLoader:
         cfg["_target_"] = "speechlab.stt.gigaam.decoder.RNNTHead"
         return hydra.utils.instantiate(cfg)
 
-    def _load_decoding(
+    def _check_decoding(
         self,
         cfg: DictConfig,
-        tokenizer_path: str | Path | None,
-    ) -> torch.nn.Module:
+    ) -> None:
         """
         cfg = {
             '_target_': 'speechlab.stt.gigaam.decoding.RNNTGreedyDecoding',
             'vocabulary': [' ', 'а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', 'я']
         }
         """
-        cfg["_target_"] = "speechlab.stt.gigaam.decoding.RNNTGreedyDecoding"
-        if tokenizer_path is not None:
-            cfg.model_path = str(tokenizer_path)
-
-        return hydra.utils.instantiate(cfg)
+        assert len(cfg.vocabulary) == 33  # without `ё` + `blank`
 
     def _warm_up_model(self, model: GigaAMModel) -> None:
         data = torch.tensor(generate_warmup_audio_f32n(16000, 20), dtype=model._dtype)
@@ -116,7 +109,7 @@ class GigaAMModelLoader:
         GigaAMConfig.model_validate(config)
 
         model_name = str(config.model.value)
-        model_path, tokenizer_path = self._download(model_name)
+        model_path = self._download(model_name)
 
         checkpoint = torch.load(model_path, weights_only=False, map_location="cpu")
         checkpoint["cfg"].model_name = model_name
@@ -131,9 +124,9 @@ class GigaAMModelLoader:
         preprocessor = self._load_preprocessor(ccfg.preprocessor)
         encoder = self._load_encoder(ccfg.encoder, config.half_encoder)
         head = self._load_head(ccfg.head)
-        decoding = self._load_decoding(ccfg.decoding, tokenizer_path)
+        self._check_decoding(ccfg.decoding)
 
-        model = GigaAMModel(preprocessor, encoder, head, decoding, device)
+        model = GigaAMModel(preprocessor, encoder, head, device)
         model.load_state_dict(checkpoint["state_dict"], strict=False)
         model.init()
         model = model.eval().to(device)

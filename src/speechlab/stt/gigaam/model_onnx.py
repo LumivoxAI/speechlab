@@ -4,45 +4,12 @@ from pathlib import Path
 import numpy as np
 import onnxruntime as rt
 
+from .tokenizer import Tokenizer
+
 _PRED_HIDDEN = 320
 _DTYPE = np.float32
 _BLANK_IDX = 33
 _MAX_LETTERS_PER_FRAME = 3
-_VOCAB = [
-    " ",
-    "а",
-    "б",
-    "в",
-    "г",
-    "д",
-    "е",
-    "ж",
-    "з",
-    "и",
-    "й",
-    "к",
-    "л",
-    "м",
-    "н",
-    "о",
-    "п",
-    "р",
-    "с",
-    "т",
-    "у",
-    "ф",
-    "х",
-    "ц",
-    "ч",
-    "ш",
-    "щ",
-    "ъ",
-    "ы",
-    "ь",
-    "э",
-    "ю",
-    "я",
-]
 
 
 class GigaAMModel:
@@ -55,6 +22,7 @@ class GigaAMModel:
         self._base_dir = base_dir
         self._model_name = model_name
         self._preprocessor = preprocessor
+        self._tokenizer = Tokenizer()
 
         self._opts = rt.SessionOptions()
         self._opts.intra_op_num_threads = 16
@@ -93,7 +61,7 @@ class GigaAMModel:
 
         encoder_inputs = {"audio_signal": audio_signal}
         encoded_proj = self._encoder.run(["encoded_proj"], encoder_inputs)[0]
-        token_ids = []
+        tokens = []
 
         decoder = self._decoder
         d_outputs = ["token_out", "h_out", "c_out"]
@@ -111,8 +79,8 @@ class GigaAMModel:
                     d_inputs["token_in"] = token
                     d_inputs["h_in"] = h
                     d_inputs["c_in"] = c
-                    token_ids.append(token)
+                    tokens.append(token)
                 else:
                     break
 
-        return "".join(_VOCAB[tok] for tok in token_ids)
+        return self._tokenizer(tokens)

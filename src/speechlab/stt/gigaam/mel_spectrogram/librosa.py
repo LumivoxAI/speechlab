@@ -137,7 +137,7 @@ class MelSpectrogramFast:
                 post_shape[-1] = 0
                 y_frames_post = np.empty_like(y_frames_pre, shape=post_shape)
 
-        fft = librosa.core.fft.get_fftlib()
+        fft = librosa.core.get_fftlib()
 
         dtype = librosa.util.dtype_r2c(y.dtype)
 
