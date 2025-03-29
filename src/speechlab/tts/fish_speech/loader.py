@@ -1,10 +1,12 @@
+import os.path
 from typing import Callable
 from pathlib import Path
 
 import torch
+import fish_speech
+from hydra import compose, initialize_config_dir
+from hydra.utils import instantiate
 from huggingface_hub import snapshot_download
-from fish_speech.models.vqgan.inference import load_model as load_vqgan_model
-from fish_speech.models.vqgan.modules.firefly import FireflyArchitecture
 from fish_speech.models.text2semantic.inference import load_model
 
 from .model import FishSpeechModel
@@ -32,6 +34,7 @@ class FishSpeechModelLoader:
         precision: torch.dtype,
         compile: bool,
     ) -> tuple[torch.nn.Module, Callable]:
+        # from fish_speech.models.text2semantic.inference.launch_thread_safe_queue
         try:
             model, decode_one_token = load_model(
                 str(model_path), device, precision, compile=compile
@@ -51,13 +54,33 @@ class FishSpeechModelLoader:
         model_path: Path,
         vqgan_config: str,
         device: str,
-    ) -> FireflyArchitecture:
+    ) -> torch.nn.Module:
+        # from fish_speech.models.vqgan.inference.load_model
+        # result == fish_speech.models.vqgan.modules.firefly.FireflyArchitecture
         try:
-            return load_vqgan_model(
-                config_name=vqgan_config,
-                checkpoint_path=str(model_path),
-                device=device,
+            config_dir = os.path.join(fish_speech.__path__[0], "configs")
+            with initialize_config_dir(version_base="1.3", config_dir=config_dir):
+                cfg = compose(config_name=vqgan_config)
+
+            model = instantiate(cfg)
+            state_dict = torch.load(
+                str(model_path), map_location=device, mmap=True, weights_only=True
             )
+            if "state_dict" in state_dict:
+                state_dict = state_dict["state_dict"]
+
+            if any("generator" in k for k in state_dict):
+                state_dict = {
+                    k.replace("generator.", ""): v
+                    for k, v in state_dict.items()
+                    if "generator." in k
+                }
+
+            model.load_state_dict(state_dict, strict=False, assign=True)
+            model.eval()
+            model.to(device)
+
+            return model
         except Exception as e:
             raise ValueError(f"Failed to load VQ-GAN model: {e}")
 

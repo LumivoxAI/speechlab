@@ -1,16 +1,13 @@
 from queue import Queue
-from typing import List, Union, Literal, Callable, Optional, Generator
-from pathlib import Path
+from typing import Union, Callable, Generator
 from threading import Event, Thread
 
 import numpy as np
-import torch
-from torch import Tensor, nn, device, float16, autocast, inference_mode
+from torch import Tensor, nn, dtype
 from pydantic import BaseModel
 from fish_speech.utils.file import audio_to_bytes
 from fish_speech.utils.schema import ServeTTSRequest
 from fish_speech.inference_engine import TTSInferenceEngine
-from fish_speech.models.vqgan.modules.firefly import FireflyArchitecture
 from fish_speech.models.text2semantic.inference import (
     GenerateRequest,
     WrappedGenerateResponse,
@@ -19,7 +16,7 @@ from fish_speech.models.text2semantic.inference import (
 
 
 class Reference(BaseModel):
-    tokens: torch.Tensor
+    tokens: Tensor
     text: str
 
     # Allow arbitrary types for pytorch related types
@@ -30,10 +27,10 @@ class Reference(BaseModel):
 class FishSpeechModel:
     def __init__(
         self,
-        llama: torch.nn.Module,
+        llama: nn.Module,
         decode_one_token: Callable,
-        vqgan: FireflyArchitecture,
-        precision: torch.dtype,
+        vqgan: nn.Module,
+        precision: dtype,
         compile: bool,
     ) -> None:
         super().__init__()
@@ -49,7 +46,7 @@ class FishSpeechModel:
 
     def _launch_llama_queue(
         self,
-        llama: torch.nn.Module,
+        llama: nn.Module,
         decode_one_token: Callable,
     ) -> Queue:
         input_queue = Queue()
@@ -119,14 +116,14 @@ class FishSpeechModel:
     def generate_streaming(
         self,
         text: str,
-        references: Union[List[Reference], Reference] = [],
-        seed: Optional[int] = None,
+        references: Union[list[Reference], Reference] = [],
+        seed: int | None = None,
         streaming: bool = False,
         max_new_tokens: int = 0,
         chunk_length: int = 200,
-        top_p: Optional[float] = None,
-        repetition_penalty: Optional[float] = None,
-        temperature: Optional[float] = None,
+        top_p: float | None = None,
+        repetition_penalty: float | None = None,
+        temperature: float | None = None,
     ) -> Generator:
         """
         Generate audio from text.
@@ -185,14 +182,14 @@ class FishSpeechModel:
     def generate(
         self,
         text: str,
-        references: Union[List[Reference], Reference] = [],
-        seed: Optional[int] = None,
+        references: Union[list[Reference], Reference] = [],
+        seed: int | None = None,
         streaming: bool = False,
         max_new_tokens: int = 0,
         chunk_length: int = 200,
-        top_p: Optional[float] = None,
-        repetition_penalty: Optional[float] = None,
-        temperature: Optional[float] = None,
+        top_p: float | None = None,
+        repetition_penalty: float | None = None,
+        temperature: float | None = None,
     ) -> Union[Generator, np.ndarray]:
         """
         Wrapper for the generate_streaming method.
