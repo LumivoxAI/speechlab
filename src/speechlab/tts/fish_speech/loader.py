@@ -84,9 +84,8 @@ class FishSpeechModelLoader:
         except Exception as e:
             raise ValueError(f"Failed to load VQ-GAN model: {e}")
 
-    # def _warm_up_model(self, model: GigaAMModel) -> None:
-    #     data = torch.tensor(generate_warmup_audio_f32n(16000, 20), dtype=model._dtype)
-    #     model.stt(data)
+    def _warm_up_model(self, model: FishSpeechModel) -> None:
+        _ = list(model.tts("Привет, мир!"))
 
     def get_model(self, config: FishSpeechConfig) -> FishSpeechModel:
         FishSpeechConfig.model_validate(config)
@@ -123,6 +122,6 @@ class FishSpeechModelLoader:
             compile=config.compile,
         )
 
-        # self._warm_up_model(model)
+        self._warm_up_model(model)
 
         return model
