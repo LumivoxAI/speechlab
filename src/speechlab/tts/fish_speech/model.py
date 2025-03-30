@@ -1,35 +1,34 @@
+import gc
 from queue import Queue
 from typing import Callable, Generator
 from threading import Event, Thread
 
-from torch import nn, dtype
-from fish_speech.utils.schema import ServeTTSRequest
-from fish_speech.inference_engine import TTSInferenceEngine
+import torch
+from torch import nn, device, inference_mode
+from fish_speech.utils import set_seed
 from fish_speech.models.text2semantic.inference import (
     GenerateRequest,
+    GenerateResponse,
     WrappedGenerateResponse,
     generate_long,
 )
+
+from .audio_manager import AudioManager
 
 
 class FishSpeechModel:
     def __init__(
         self,
         llama: nn.Module,
+        audio_mng: AudioManager,
         decode_one_token: Callable,
-        vqgan: nn.Module,
-        precision: dtype,
-        compile: bool,
+        device: str | device,
     ) -> None:
         super().__init__()
-        llama_queue = self._launch_llama_queue(llama, decode_one_token)
 
-        self.inference_engine = TTSInferenceEngine(
-            llama_queue=llama_queue,
-            decoder_model=vqgan,
-            precision=precision,
-            compile=compile,
-        )
+        self._audio_mng = audio_mng
+        self._llama_queue = self._launch_llama_queue(llama, decode_one_token)
+        self._device = device
 
     def _launch_llama_queue(
         self,
@@ -65,10 +64,7 @@ class FishSpeechModel:
 
         return input_queue
 
-    @property
-    def samplerate(self) -> int:
-        return self.inference_engine.decoder_model.spec_transform.sample_rate
-
+    @inference_mode()
     def tts(
         self,
         text: str,
@@ -79,35 +75,62 @@ class FishSpeechModel:
         repetition_penalty: float = 1.2,
         temperature: float = 0.7,
     ) -> Generator:
-        request = ServeTTSRequest(
-            text=text,
-            chunk_length=200,  # Chunk length for streaming. Defaults to 200.
-            format="wav",
-            references=[],
-            reference_id=reference_id,
-            seed=seed,
-            use_memory_cache="on",
-            normalize=False,
-            streaming=True,
+        prompt_tokens, prompt_texts = [], []
+        if reference_id is not None:
+            prompt_tokens, prompt_texts = self._audio_mng.load_reference(reference_id)
+
+        if seed is not None:
+            set_seed(seed)
+
+        chunk_length = 200
+        request = dict(
+            device=self._device,
             max_new_tokens=max_new_tokens,
+            text=text,
             top_p=top_p,
             repetition_penalty=repetition_penalty,
             temperature=temperature,
+            compile=False,  # Only affects logging
+            iterative_prompt=chunk_length > 0,
+            chunk_length=chunk_length,
+            max_length=4096,
+            prompt_tokens=prompt_tokens,
+            prompt_text=prompt_texts,
+        )
+        response_queue = Queue()
+        self._llama_queue.put(
+            GenerateRequest(
+                request=request,
+                response_queue=response_queue,
+            )
         )
 
-        for result in self.inference_engine.inference(request):
-            match result.code:
-                case "header":
-                    pass  # skip block with samplerate
+        segments_cnt = 0
 
-                case "error":
-                    if isinstance(result.error, Exception):
-                        raise result.error
-                    else:
-                        raise RuntimeError("Unknown error")
+        while True:
+            wrapped_result: WrappedGenerateResponse = response_queue.get()
+            if wrapped_result.status == "error":
+                if isinstance(wrapped_result.response, Exception):
+                    raise wrapped_result.response
+                else:
+                    raise Exception("Unknown error")
 
-                case "segment":
-                    yield result.audio[1]  # audio[0] == samplerate
+            if not isinstance(wrapped_result.response, GenerateResponse):
+                raise TypeError(
+                    "Expected GenerateResponse, got {type(wrapped_result.response).__name__}"
+                )
 
-                case "final":
-                    pass  # skip block with all segments
+            result: GenerateResponse = wrapped_result.response
+            if result.action != "next":
+                yield self._audio_mng.get_audio_segment(result)
+                segments_cnt += 1
+            else:
+                break
+
+        # Clean up the memory
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            gc.collect()
+
+        if segments_cnt == 0:
+            raise RuntimeError("No audio generated, please check the input text.")

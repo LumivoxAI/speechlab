@@ -11,14 +11,16 @@ from fish_speech.models.text2semantic.inference import load_model
 
 from .model import FishSpeechModel
 from .config import FishSpeechConfig
+from .audio_manager import AudioManager
 
 
 class FishSpeechModelLoader:
-    def __init__(self, models_dir: Path | str) -> None:
-        self._root_dir = Path(models_dir) / "fish_speech"
+    def __init__(self, model_dir: Path | str, reference_dir: Path | str) -> None:
+        self._model_dir = Path(model_dir) / "fish_speech"
+        self._reference_dir = Path(reference_dir) / "fish_speech"
 
     def _download(self, model_version: str) -> Path:
-        local_dir = self._root_dir / model_version
+        local_dir = self._model_dir / model_version
         local_dir.mkdir(parents=True, exist_ok=True)
         model_path = snapshot_download(
             repo_id=f"fishaudio/fish-speech-{model_version}",
@@ -113,13 +115,13 @@ class FishSpeechModelLoader:
             "firefly_gan_vq",
             device,
         )
+        audio_mng = AudioManager(self._reference_dir, vqgan, precision)
 
         model = FishSpeechModel(
             llama=llama,
+            audio_mng=audio_mng,
             decode_one_token=decode_one_token,
-            vqgan=vqgan,
-            precision=precision,
-            compile=config.compile,
+            device=vqgan.device,
         )
 
         self._warm_up_model(model)
