@@ -22,7 +22,7 @@ class BaseZMQServer(ABC):
         self.log.info(f"Received signal {signum}, stopping server")
         self._stopped = True
 
-    def send(self, client_id: bytes, msg: BaseMessage, data: bytes | None) -> bool:
+    def send(self, client_id: bytes, msg: BaseMessage, data: bytes | None = None) -> bool:
         try:
             if data is None:
                 parts = [client_id, msg.pack()]
@@ -42,9 +42,9 @@ class BaseZMQServer(ABC):
 
         return True
 
-    def recv2(self, request_type: type) -> tuple[bytes, BaseMessage] | None:
+    def recv2(self, msg_type: type) -> tuple[bytes, BaseMessage] | None:
         try:
-            # [client_id, request_bin]
+            # [client_id, msg_bin]
             parts = self._socket.recv_multipart()
             if len(parts) != 2:
                 self.log.warning(
@@ -52,8 +52,8 @@ class BaseZMQServer(ABC):
                 )
                 return None
             client_id = parts[0]
-            request = request_type.unpack(parts[1])
-            return client_id, request
+            msg = msg_type.unpack(parts[1])
+            return client_id, msg
         except zmq.ZMQError:
             self.log.exception("Failed to recv message, ZMQ error")
             return None
@@ -61,9 +61,9 @@ class BaseZMQServer(ABC):
             self.log.exception("Failed to recv message")
             return None
 
-    def recv3(self, request_type: type) -> tuple[bytes, BaseMessage, bytes | None] | None:
+    def recv3(self, msg_type: type) -> tuple[bytes, BaseMessage, bytes | None] | None:
         try:
-            # [client_id, request_bin, data | None]
+            # [client_id, msg_bin, data | None]
             parts = self._socket.recv_multipart()
             if len(parts) < 2 or len(parts) > 3:
                 self.log.warning(
@@ -71,12 +71,12 @@ class BaseZMQServer(ABC):
                 )
                 return None
             client_id = parts[0]
-            request = request_type.unpack(parts[1])
+            msg = msg_type.unpack(parts[1])
             if len(parts) == 3:
                 data = parts[2]
             else:
                 data = None
-            return client_id, request, data
+            return client_id, msg, data
         except zmq.ZMQError:
             self.log.exception("Failed to recv message, ZMQ error")
             return None
