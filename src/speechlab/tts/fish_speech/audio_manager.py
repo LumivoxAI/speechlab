@@ -93,3 +93,15 @@ class AudioManager(VQManager):
 
         audio = waveform.squeeze().numpy()
         return audio
+
+    def close(self) -> None:
+        if self._ref_by_id is not None:
+            self._ref_by_id.clear()
+            self._ref_by_id = None
+
+        if self._root_dir is not None:
+            self._device = None
+            self._precision = None
+            self.decoder_model.to("cpu")
+            del self.decoder_model
+            self.decoder_model = None

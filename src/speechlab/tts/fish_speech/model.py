@@ -152,17 +152,21 @@ class FishSpeechModel:
             raise RuntimeError("No audio generated, please check the input text.")
 
     def close(self) -> None:
-        self._stop_event.set()
-        self._thread.join()
-        self._stop_event = None
+        if self._stop_event is not None:
+            self._stop_event.set()
+            self._thread.join()
+            self._stop_event = None
+            self._thread = None
 
-        self._llama.to("cpu")
-        del self._llama
-        self._llama = None
+        if self._llama is not None:
+            self._llama.to("cpu")
+            del self._llama
+            self._llama = None
+            self._llama_queue = None
 
-        self._audio_mng.close()
-        self._audio_mng = None
-        self._llama_queue = None
+        if self._audio_mng is not None:
+            self._audio_mng.close()
+            self._audio_mng = None
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
