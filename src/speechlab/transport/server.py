@@ -115,4 +115,4 @@ class BaseZMQServer(ABC):
                 self._context.term()
                 self._context = None
         except Exception:
-            self.log.exception(f"Error during shutdown")
+            self.log.exception(f"Error during server shutdown")
