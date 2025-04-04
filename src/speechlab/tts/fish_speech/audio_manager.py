@@ -102,6 +102,5 @@ class AudioManager(VQManager):
         if self._root_dir is not None:
             self._device = None
             self._precision = None
-            self.decoder_model.to("cpu")
             del self.decoder_model
             self.decoder_model = None

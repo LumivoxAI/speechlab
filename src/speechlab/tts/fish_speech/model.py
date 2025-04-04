@@ -159,7 +159,6 @@ class FishSpeechModel:
             self._thread = None
 
         if self._llama is not None:
-            self._llama.to("cpu")
             del self._llama
             self._llama = None
             self._llama_queue = None
@@ -170,4 +169,5 @@ class FishSpeechModel:
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            gc.collect()
+
+        gc.collect()

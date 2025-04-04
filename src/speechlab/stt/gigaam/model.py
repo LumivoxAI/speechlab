@@ -88,6 +88,3 @@ class GigaAMModel(nn.Module):
             module=self.head.decoder,
             root_dir=root_dir,
         )
-
-    def clear(self) -> None:
-        self.to("cpu")
