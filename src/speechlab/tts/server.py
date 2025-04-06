@@ -13,8 +13,8 @@ class TTSServer(BaseZMQServer):
         if parts == None:
             return
         client_id, request = parts
-        for responce, data in self._handler.tts(request):
-            if not self.send(client_id, responce, data):
+        for response, data in self._handler.tts(request):
+            if not self.send(client_id, response, data):
                 break
 
     def close(self) -> None:

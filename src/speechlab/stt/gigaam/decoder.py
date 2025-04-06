@@ -42,7 +42,9 @@ class RNNTDecoder(nn.Module):
         g, (h, c) = self.lstm(emb.unsqueeze(0), (h, c))
         pred_proj = self.pred(g[0])
         joint_out = self.joint_net(x + pred_proj)
-        return joint_out.argmax(dim=-1), h, c
+        # origin: joint_out.argmax(dim=-1), h, c
+        # change for tensor rt
+        return joint_out.unsqueeze(0).argmax(dim=-1).squeeze(), h, c
 
     def input_example(self) -> tuple[Tensor]:
         device = next(self.parameters()).device

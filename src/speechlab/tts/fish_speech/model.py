@@ -146,7 +146,8 @@ class FishSpeechModel:
         # Clean up the memory
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            gc.collect()
+
+        gc.collect()
 
         if segments_cnt == 0:
             raise RuntimeError("No audio generated, please check the input text.")
