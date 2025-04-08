@@ -108,6 +108,11 @@ class GigaAMModelLoader:
     def get_model(self, config: GigaAMConfig) -> GigaAMModel:
         GigaAMConfig.model_validate(config)
 
+        if not hydra.__version__.startswith("1.3"):
+            raise RuntimeError(
+                f"Hydra version {hydra.__version__} is not supported. Please use version 1.3.x."
+            )
+
         model_name = str(config.model.value)
         model_path = self._download(model_name)
 

@@ -1,0 +1,10 @@
+{
+    "python.defaultInterpreterPath": ".venv/bin/python",
+    "files.exclude": {
+        "**/.venv": true,
+        "**/.git": true,
+        "**/*.pyc": true,
+        "**/__pycache__": true,
+        "**/.ruff_cache": true,
+    },
+}
