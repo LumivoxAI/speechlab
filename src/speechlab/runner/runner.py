@@ -8,9 +8,19 @@ from loguru import logger
 
 from .worker import Worker
 
+LOGURU_FORMAT = (
+    "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+    "<level>{level: <8}</level> | <cyan>[{extra[name]}]</cyan> "
+    "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+)
+
 
 class Runner:
     def __init__(self) -> None:
+        logger.configure(extra={"name": "N/A"})
+        logger.remove()
+        logger.add(sys.stdout, format=LOGURU_FORMAT, enqueue=True, level="DEBUG")
+
         self._log = logger.bind(name="Runner")
         self._workers: dict[str, Worker] = {}
         self._lock = threading.RLock()
@@ -18,6 +28,8 @@ class Runner:
         atexit.register(self.cleanup)
         signal.signal(signal.SIGTERM, self.signal_handler)
         signal.signal(signal.SIGINT, self.signal_handler)
+
+        self._log.info("Starting")
 
     def start(
         self,
@@ -49,6 +61,11 @@ class Runner:
                 return True
 
             return False
+
+    def wait(self) -> None:
+        self._log.info("Main process is running. Press Ctrl+C to stop")
+        while True:
+            signal.pause()
 
     def stop_all(self) -> None:
         with self._lock:
