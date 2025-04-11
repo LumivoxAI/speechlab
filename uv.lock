@@ -21,7 +21,7 @@ conflicts = [[
 [[manifest.dependency-metadata]]
 name = "fish-speech"
 version = "0.1.0"
-requires-dist = ["huggingface-hub==0.30.1", "transformers>=4.45.2", "natsort>=8.4.0", "lightning>=2.1.0", "rich>=13.5.3", "tiktoken>=0.8.0", "einops>=0.7.0", "loralib>=0.1.2", "vector-quantize-pytorch==1.14.24", "click==8.1.8"]
+requires-dist = ["huggingface-hub==0.30.1", "transformers>=4.45.2", "natsort>=8.4.0", "lightning>=2.1.0", "rich>=13.5.3", "tiktoken>=0.8.0", "einops>=0.7.0", "loralib>=0.1.2", "vector-quantize-pytorch==1.14.24"]
 
 [[package]]
 name = "aiohappyeyeballs"
@@ -339,7 +339,6 @@ name = "fish-speech"
 version = "0.1.0"
 source = { git = "https://github.com/fishaudio/fish-speech?rev=d9f9f148815cf7f7f5d3690b785f4c1273910097#d9f9f148815cf7f7f5d3690b785f4c1273910097" }
 dependencies = [
-    { name = "click" },
     { name = "einops" },
     { name = "huggingface-hub" },
     { name = "lightning" },
@@ -1949,6 +1948,7 @@ cpu = [
     { name = "torchaudio" },
 ]
 develop = [
+    { name = "click" },
     { name = "fish-speech" },
     { name = "hydra-core" },
     { name = "librosa" },
@@ -1966,6 +1966,7 @@ develop = [
     { name = "triton" },
 ]
 docker = [
+    { name = "click" },
     { name = "fish-speech" },
     { name = "hydra-core" },
     { name = "librosa" },
@@ -1991,6 +1992,7 @@ pytorch = [
     { name = "omegaconf" },
 ]
 server = [
+    { name = "click" },
     { name = "librosa" },
     { name = "numpy" },
     { name = "requests" },
@@ -2009,6 +2011,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "click", marker = "extra == 'server'", specifier = "==8.1.8" },
     { name = "fish-speech", marker = "extra == 'fish-speech'", git = "https://github.com/fishaudio/fish-speech?rev=d9f9f148815cf7f7f5d3690b785f4c1273910097" },
     { name = "hydra-core", marker = "extra == 'pytorch'", specifier = "==1.3.2" },
     { name = "librosa", marker = "extra == 'server'", specifier = "==0.11.0" },

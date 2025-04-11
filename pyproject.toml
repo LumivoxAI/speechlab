@@ -58,6 +58,7 @@ server = [
     "librosa==0.11.0",
     "requests>=2.32.3",
     "tqdm>=4.67.1",
+    "click==8.1.8",
 ]
 fish-speech = [
     "fish-speech==0.1.0",
@@ -118,7 +119,6 @@ requires-dist = [
     "einops>=0.7.0",
     "loralib>=0.1.2",
     "vector_quantize_pytorch==1.14.24",
-    "click==8.1.8",
 ]
 
 [build-system]
