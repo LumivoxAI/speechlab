@@ -9,7 +9,7 @@ class FishSpeechAsyncClient(BaseZMQAsyncClient):
         self,
         address: str,
         client_id: str = None,
-        name: str = "FishSpeechAsyncClient",
+        name: str = "FishSpeechClient",
     ) -> None:
         super().__init__(address, client_id=client_id, name=name)
         self._samplerate = 0

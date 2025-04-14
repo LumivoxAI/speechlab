@@ -7,7 +7,7 @@ class STTAsyncClient(BaseZMQAsyncClient):
         self,
         address: str,
         client_id: str = None,
-        name: str = "STTAsyncClient",
+        name: str = "STTClient",
     ) -> None:
         super().__init__(address, client_id=client_id, name=name)
 

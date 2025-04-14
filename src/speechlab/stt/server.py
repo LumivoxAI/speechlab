@@ -3,15 +3,14 @@ from .protocol import STTRequest, STTResponse
 from ..transport.server import BaseZMQServer
 
 
-class STTServer(BaseZMQServer):
+class STTServer(BaseZMQServer[BaseSTTHandler]):
     def __init__(
         self,
         handler: BaseSTTHandler,
         address: str,
         name: str = "STTServer",
     ) -> None:
-        super().__init__(address, name=name)
-        self._handler = handler
+        super().__init__(address, handler, name)
 
     def _add_audio(
         self,
@@ -26,7 +25,7 @@ class STTServer(BaseZMQServer):
             )
 
         try:
-            self._handler.add_audio((client_id, session_id), audio_data)
+            self.handler.add_audio((client_id, session_id), audio_data)
             self.log.debug(f"Added {len(audio_data)} bytes of audio for {client_id}:{session_id}")
             return None
         except Exception as e:
@@ -40,7 +39,7 @@ class STTServer(BaseZMQServer):
         remove_session: bool,
     ) -> STTResponse:
         try:
-            text = self._handler.stt((client_id, session_id), remove_session)
+            text = self.handler.stt((client_id, session_id), remove_session)
             self.log.debug(f"STT processed for {client_id}:{session_id}, result text: {text}")
             return STTResponse(session_id=session_id, text=text)
         except Exception as e:
@@ -53,7 +52,7 @@ class STTServer(BaseZMQServer):
         session_id: int,
     ) -> STTResponse:
         try:
-            self._handler.remove_session((client_id, session_id))
+            self.handler.remove_session((client_id, session_id))
             self.log.debug(f"Session {client_id}:{session_id} removed")
             return STTResponse(session_id=session_id)
         except Exception as e:
@@ -91,13 +90,4 @@ class STTServer(BaseZMQServer):
         response = self._process_request(client_id, request, audio_data)
 
         _ = self.send(client_id_bin, response)
-        self._handler.check_inactive()
-
-    def close(self) -> None:
-        super().close()
-        try:
-            if self._handler is not None:
-                self._handler.close()
-                self._handler = None
-        except Exception:
-            self.log.exception(f"Error during server shutdown")
+        self.handler.check_inactive()

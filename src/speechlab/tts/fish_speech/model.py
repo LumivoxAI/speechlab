@@ -25,8 +25,6 @@ class FishSpeechModel:
         decode_one_token: Callable,
         device: str | device,
     ) -> None:
-        super().__init__()
-
         self._audio_mng = audio_mng
         self._llama = llama
         self._stop_event = Event()

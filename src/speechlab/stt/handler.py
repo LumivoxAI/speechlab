@@ -1,7 +1,9 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+
+from ..transport.handler import BaseHandler
 
 
-class BaseSTTHandler(ABC):
+class BaseSTTHandler(BaseHandler):
     @abstractmethod
     def add_audio(self, key: tuple[str, int], data: bytes) -> None: ...
 
@@ -13,6 +15,3 @@ class BaseSTTHandler(ABC):
 
     @abstractmethod
     def check_inactive(self) -> None: ...
-
-    @abstractmethod
-    def close(self) -> None: ...

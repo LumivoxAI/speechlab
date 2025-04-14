@@ -1,22 +1,32 @@
 import signal
 from abc import ABC, abstractmethod
+from typing import Generic, TypeVar
 
 import zmq
 from loguru import logger
 
+from .handler import BaseHandler
 from .message import BaseMessage
 
+THandler = TypeVar("THandler", bound=BaseHandler)
 
-class BaseZMQServer(ABC):
-    def __init__(self, address: str, name: str = "ZMQServer") -> None:
+
+class BaseZMQServer(ABC, Generic[THandler]):
+    def __init__(self, handler: THandler, address: str, name: str = "ZMQServer") -> None:
         self._stopped = False
 
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.ROUTER)
         self._socket.bind(address)
 
+        self._handler = handler
+
         self.log = logger.bind(name=name)
         self.log.info(f"Server started on {address}")
+
+    @property
+    def handler(self) -> THandler:
+        return self._handler
 
     def _on_stop(self, signum, frame) -> None:
         self.log.info(f"Received signal {signum}, stopping server")
@@ -114,5 +124,8 @@ class BaseZMQServer(ABC):
             if self._context is not None:
                 self._context.term()
                 self._context = None
+            if self._handler is not None:
+                self._handler.close()
+                self._handler = None
         except Exception:
             self.log.exception(f"Error during server shutdown")

@@ -6,7 +6,7 @@ from .message import BaseMessage
 
 
 class BaseZMQAsyncClient:
-    def __init__(self, address: str, client_id: str = None, name: str = "ZMQAsyncClient") -> None:
+    def __init__(self, address: str, client_id: str = None, name: str = "ZMQClient") -> None:
         self._client_id = client_id or f"client-{id(self)}"
 
         # ZMQ setup

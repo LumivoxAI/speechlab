@@ -1,15 +1,13 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Iterator
 
+from ..transport.handler import BaseHandler
 from ..transport.message import BaseMessage
 
 
-class BaseTTSHandler(ABC):
+class BaseTTSHandler(BaseHandler):
     @abstractmethod
     def request_type(self) -> type[BaseMessage]: ...
 
     @abstractmethod
     def tts(self, msg: BaseMessage) -> Iterator[tuple[BaseMessage, bytes | None]]: ...
-
-    @abstractmethod
-    def close(self) -> None: ...
