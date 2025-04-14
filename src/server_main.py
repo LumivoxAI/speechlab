@@ -55,6 +55,29 @@ class GigaAM:
         server.run()
 
 
+class RuNorm:
+    def get_config(self) -> Any:
+        from speechlab.preprocess.runorm.config import ModelSize, DeviceOption, RuNormConfig
+
+        return RuNormConfig(
+            device=DeviceOption.CUDA,
+            model_size=ModelSize.MEDIUM,
+        )
+
+    def run(self, model_dir: Path, reference_dir: Path) -> None:
+        from speechlab.preprocess.server import PreprocessServer
+        from speechlab.preprocess.runorm.model import RuNormModel
+        from speechlab.preprocess.runorm.config import RuNormConfig
+        from speechlab.preprocess.runorm.loader import RuNormModelLoader
+        from speechlab.preprocess.runorm.handler import RuNormHandler
+
+        config: RuNormConfig = self.get_config()
+        model: RuNormModel = RuNormModelLoader(model_dir).get_model(config)
+        handler = RuNormHandler(model, "RuNorm")
+        server = PreprocessServer(handler, "tcp://*:5503", "RuNorm")
+        server.run()
+
+
 @click.command()
 @click.option("--docker", default=False, help="Run in Docker mode")
 @click.option("--model_dir", default="/model", help="Path to the model directory")
@@ -85,6 +108,13 @@ def main(docker: bool, model_dir: str, reference_dir: str) -> None:
         "GigaAM",
         GigaAM().run,
         model_dir=model_dir,
+        reference_dir=reference_dir,
+    )
+    runner.start(
+        "RuNorm",
+        RuNorm().run,
+        model_dir=model_dir,
+        reference_dir=reference_dir,
     )
     runner.wait()
 

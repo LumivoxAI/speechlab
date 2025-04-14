@@ -16,6 +16,7 @@ docker-run:
 		--gpus all \
 		-p 5501:5501 \
 		-p 5502:5502 \
+		-p 5503:5503 \
 		-v $(MAKEFILE_DIR)../model:/model \
 		-v $(MAKEFILE_DIR)../reference:/reference \
 		$(IMAGE_NAME)

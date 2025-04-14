@@ -22,7 +22,8 @@ COPY src/server_main.py ./
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 VOLUME [ "/models", "/reference" ]
-EXPOSE 5501
-EXPOSE 5502
+EXPOSE 5501/tcp
+EXPOSE 5502/tcp
+EXPOSE 5503/tcp
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["--docker", "True", "--model_dir", "/model", "--reference_dir", "/reference"]

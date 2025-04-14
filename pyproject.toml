@@ -63,11 +63,14 @@ server = [
 fish-speech = [
     "fish-speech==0.1.0",
 ]
+ru-norm = [
+    "runorm==1.1",
+]
 docker = [
-    "speechlab[pytorch,server,fish-speech]",
+    "speechlab[pytorch,server,fish-speech,ru-norm]",
 ]
 develop = [
-    "speechlab[gpu,onnx,pytorch,server,fish-speech]",
+    "speechlab[gpu,onnx,pytorch,server,fish-speech,ru-norm]",
 ]
 
 [project.urls]
