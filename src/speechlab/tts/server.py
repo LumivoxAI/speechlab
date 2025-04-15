@@ -4,7 +4,7 @@ from ..transport.server import BaseZMQServer
 
 class TTSServer(BaseZMQServer[BaseTTSHandler]):
     def __init__(self, handler: BaseTTSHandler, address: str, name: str = "TTSServer") -> None:
-        super().__init__(address, handler, name)
+        super().__init__(handler, address, name)
         self._request_type = handler.request_type()
 
     def process(self) -> None:

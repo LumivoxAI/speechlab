@@ -10,7 +10,7 @@ class STTServer(BaseZMQServer[BaseSTTHandler]):
         address: str,
         name: str = "STTServer",
     ) -> None:
-        super().__init__(address, handler, name)
+        super().__init__(handler, address, name)
 
     def _add_audio(
         self,

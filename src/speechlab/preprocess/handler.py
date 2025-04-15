@@ -10,6 +10,3 @@ class BasePreprocessHandler(ABC):
 
     @abstractmethod
     def preprocess(self, msg: BaseMessage) -> BaseMessage: ...
-
-    @abstractmethod
-    def close(self) -> None: ...
