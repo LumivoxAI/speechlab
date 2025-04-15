@@ -59,18 +59,22 @@ server = [
     "requests>=2.32.3",
     "tqdm>=4.67.1",
     "click==8.1.8",
+    "gradio==5.29.0",
 ]
 fish-speech = [
     "fish-speech==0.1.0",
+]
+xtts = [
+    "coqui-tts==0.1.0",
 ]
 ru-norm = [
     "runorm==1.1",
 ]
 docker = [
-    "speechlab[pytorch,server,fish-speech,ru-norm]",
+    "speechlab[pytorch,server,fish-speech,xtts,ru-norm]",
 ]
 develop = [
-    "speechlab[gpu,onnx,pytorch,server,fish-speech,ru-norm]",
+    "speechlab[gpu,onnx,pytorch,server,fish-speech,xtts,ru-norm]",
 ]
 
 [project.urls]
@@ -93,6 +97,7 @@ torch = [
   { index = "torch-gpu", extra = "gpu" },
 ]
 fish-speech = { git = "https://github.com/fishaudio/fish-speech", rev = "d9f9f148815cf7f7f5d3690b785f4c1273910097"}
+coqui-tts = { git = "https://github.com/idiap/coqui-ai-TTS", rev = "97e4deb58c86dfa222e90af36cf9f2d88dfbcf17"}
 
 [[tool.uv.index]]
 name = "torch-cpu"
@@ -114,7 +119,7 @@ name = "fish-speech"
 version = "0.1.0" # rev = "d9f9f1", master after 1.5.0
 requires-dist = [
     "huggingface-hub==0.30.1",
-    "transformers>=4.45.2",
+    "transformers>=4.47.0",
     "natsort>=8.4.0",
     "lightning>=2.1.0",
     "rich>=13.5.3",
@@ -122,6 +127,28 @@ requires-dist = [
     "einops>=0.7.0",
     "loralib>=0.1.2",
     "vector_quantize_pytorch==1.14.24",
+]
+
+[[tool.uv.dependency-metadata]]
+name = "coqui-tts"
+version = "0.1.0" # rev = "97e4de", dev after v0.26.0
+requires-dist = [
+    # Core
+    "anyascii>=0.3.0",
+    # Training
+    "matplotlib>=3.8.4",
+    # Coqui stack
+    "coqui-tts-trainer>=0.2.0,<0.3.0",
+    "coqpit-config>=0.2.0,<0.3.0",
+    # Gruut + supported languages
+    "gruut[de,es,fr]>=2.4.0",
+    # Tortoise
+    "transformers>=4.47.0",
+    # XTTS
+    "num2words>=0.5.14",
+    "spacy[ja]>=3.8,<4",
+    # Performance
+    "deepspeed==0.16.7",
 ]
 
 [build-system]
