@@ -68,6 +68,7 @@ fish-speech = [
 xtts = [
     "coqui-tts==0.1.0",
     "omogre",
+    # "deepspeed==0.16.7",
 ]
 ru-norm = [
     "runorm==1.1",
@@ -149,8 +150,6 @@ requires-dist = [
     # XTTS
     "num2words>=0.5.14",
     "spacy>=3.8,<4",
-    # Performance
-    "deepspeed==0.16.7",
 ]
 
 [build-system]

@@ -30,6 +30,30 @@ class FishSpeech:
         server.run()
 
 
+class XTTS:
+    def get_config(self) -> Any:
+        from speechlab.tts.xtts.config import XTTSConfig, DeviceOption, ModelVersion
+
+        return XTTSConfig(
+            device=DeviceOption.CUDA,
+            version=ModelVersion.RuIPA,
+            use_deepspeed=False,
+        )
+
+    def run(self, model_dir: Path, reference_dir: Path) -> None:
+        from speechlab.tts.server import TTSServer
+        from speechlab.tts.xtts.model import XTTSModel
+        from speechlab.tts.xtts.config import XTTSConfig
+        from speechlab.tts.xtts.loader import XTTSModelLoader
+        from speechlab.tts.xtts.handler import XTTSHandler
+
+        config: XTTSConfig = self.get_config()
+        model: XTTSModel = XTTSModelLoader(model_dir, reference_dir).get_model(config)
+        handler = XTTSHandler(model)
+        server = TTSServer(handler, "tcp://*:5502", "XTTS")
+        server.run()
+
+
 class GigaAM:
     def get_config(self) -> Any:
         from speechlab.stt.gigaam.config import ModelOption, DeviceOption, GigaAMConfig
@@ -38,10 +62,10 @@ class GigaAM:
             device=DeviceOption.CUDA,
             model=ModelOption.RNNT_V2,
             half_encoder=True,
-            compile=False,
+            compile=True,
         )
 
-    def run(self, model_dir: Path) -> None:
+    def run(self, model_dir: Path, reference_dir: Path) -> None:
         from speechlab.stt.server import STTServer
         from speechlab.stt.gigaam.model import GigaAMModel
         from speechlab.stt.gigaam.config import GigaAMConfig
@@ -51,7 +75,7 @@ class GigaAM:
         config: GigaAMConfig = self.get_config()
         model: GigaAMModel = GigaAMModelLoader(model_dir).get_model(config)
         handler = STTGigaAMHandler(model, inactivity_timeout_ms=10 * 1000)
-        server = STTServer(handler, "tcp://*:5502", "GigaAM")
+        server = STTServer(handler, "tcp://*:5510", "GigaAM")
         server.run()
 
 
@@ -74,7 +98,7 @@ class RuNorm:
         config: RuNormConfig = self.get_config()
         model: RuNormModel = RuNormModelLoader(model_dir).get_model(config)
         handler = RuNormHandler(model, "RuNorm")
-        server = PreprocessServer(handler, "tcp://*:5503", "RuNorm")
+        server = PreprocessServer(handler, "tcp://*:5520", "RuNorm")
         server.run()
 
 
@@ -101,6 +125,12 @@ def main(docker: bool, model_dir: str, reference_dir: str) -> None:
     runner.start(
         "FishSpeech",
         FishSpeech().run,
+        model_dir=model_dir,
+        reference_dir=reference_dir,
+    )
+    runner.start(
+        "XTTS",
+        XTTS().run,
         model_dir=model_dir,
         reference_dir=reference_dir,
     )

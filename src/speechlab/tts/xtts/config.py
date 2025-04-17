@@ -18,8 +18,16 @@ class ModelVersion(StrEnum):
 class XTTSConfig(BaseModel):
     device: DeviceOption = DeviceOption.CUDA
     version: ModelVersion = ModelVersion.Multilingual
-    use_deepspeed: bool = True
+    use_deepspeed: bool = False
 
     @model_validator(mode="after")
     def validate_options(self) -> Self:
+        if self.use_deepspeed:
+            try:
+                import deepspeed  # type: ignore
+            except ImportError:
+                raise ImportError(
+                    "deepspeed is not installed. Please install it with `pip install deepspeed`."
+                )
+
         return self
