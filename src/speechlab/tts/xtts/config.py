@@ -11,6 +11,7 @@ class DeviceOption(StrEnum):
 
 class ModelVersion(StrEnum):
     Multilingual = "coqui/XTTS-v2"
+    RuIPA = "omogr/xtts-ru-ipa"
     Donu = "NeuroDonu/RU-XTTS-DonuModel"
 
 

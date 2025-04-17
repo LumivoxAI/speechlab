@@ -55,17 +55,19 @@ pytorch = [
 ]
 server = [
     "numpy==2.1.3",
-    "librosa==0.11.0",
-    "requests>=2.32.3",
-    "tqdm>=4.67.1",
     "click==8.1.8",
+    "tqdm==4.67.1",
     "gradio==5.29.0",
+    "librosa==0.11.0",
+    "requests==2.32.3",
+    "huggingface-hub==0.30.1",
 ]
 fish-speech = [
     "fish-speech==0.1.0",
 ]
 xtts = [
     "coqui-tts==0.1.0",
+    "omogre",
 ]
 ru-norm = [
     "runorm==1.1",
@@ -98,6 +100,7 @@ torch = [
 ]
 fish-speech = { git = "https://github.com/fishaudio/fish-speech", rev = "d9f9f148815cf7f7f5d3690b785f4c1273910097"}
 coqui-tts = { git = "https://github.com/idiap/coqui-ai-TTS", rev = "97e4deb58c86dfa222e90af36cf9f2d88dfbcf17"}
+omogre = { git = "https://github.com/omogr/omogre.git" }
 
 [[tool.uv.index]]
 name = "torch-cpu"
@@ -118,7 +121,6 @@ explicit = true
 name = "fish-speech"
 version = "0.1.0" # rev = "d9f9f1", master after 1.5.0
 requires-dist = [
-    "huggingface-hub==0.30.1",
     "transformers>=4.47.0",
     "natsort>=8.4.0",
     "lightning>=2.1.0",
@@ -140,13 +142,13 @@ requires-dist = [
     # Coqui stack
     "coqui-tts-trainer>=0.2.0,<0.3.0",
     "coqpit-config>=0.2.0,<0.3.0",
-    # Gruut + supported languages
-    "gruut[de,es,fr]>=2.4.0",
+    # Gruut
+    "gruut>=2.4.0",
     # Tortoise
     "transformers>=4.47.0",
     # XTTS
     "num2words>=0.5.14",
-    "spacy[ja]>=3.8,<4",
+    "spacy>=3.8,<4",
     # Performance
     "deepspeed==0.16.7",
 ]

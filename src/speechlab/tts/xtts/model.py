@@ -1,5 +1,5 @@
 import gc
-from typing import Iterator
+from typing import Callable, Iterator
 from pathlib import Path
 
 import torch
@@ -21,9 +21,10 @@ AUDIO_EXTENSIONS = {
 
 
 class XTTSModel:
-    def __init__(self, impl: Xtts, reference_dir: Path) -> None:
+    def __init__(self, impl: Xtts, text_preprocessor: Callable, reference_dir: Path) -> None:
         self._impl = impl
         self._reference_dir = reference_dir
+        self._text_preprocessor = text_preprocessor
         self._speakers_cache: dict[str, tuple] = {}
 
     def _get_speaker_from_reference(self, reference_id: str) -> tuple:
@@ -52,10 +53,9 @@ class XTTSModel:
         if speaker_id in self._speakers_cache:
             return self._speakers_cache[speaker_id]
 
-        if speaker_id in self._impl.speaker_manager.speaker_names:
-            gpt_cond_latents, speaker_embedding = self._impl.speaker_manager.speakers[
-                speaker_id
-            ].values()
+        smanager = self._impl.speaker_manager
+        if smanager is not None and speaker_id in smanager.speaker_names:
+            gpt_cond_latents, speaker_embedding = smanager.speakers[speaker_id].values()
             self._speakers_cache[speaker_id] = (gpt_cond_latents, speaker_embedding)
             return gpt_cond_latents, speaker_embedding
 
@@ -84,7 +84,7 @@ class XTTSModel:
         """
         gpt_cond_latent, speaker_embedding = self._get_speaker(speaker_id)
         chunks = self._impl.inference_stream(
-            text=text,
+            text=self._text_preprocessor(text),
             language=language,
             gpt_cond_latent=gpt_cond_latent,
             speaker_embedding=speaker_embedding,

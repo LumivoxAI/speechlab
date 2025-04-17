@@ -49,6 +49,9 @@ class XTTSModelLoader:
             torch.backends.cudnn.enabled = True
 
         model_path = self._download(config.version)
+        speaker_file_path = model_path / "speakers_xtts.pth"
+        is_speaker_file = speaker_file_path.exists()
+
         xtts_config = XttsConfig()
         xtts_config.load_json(model_path / "config.json")
         impl = Xtts.init_from_config(xtts_config)
@@ -57,17 +60,26 @@ class XTTSModelLoader:
             checkpoint_dir=str(model_path),
             checkpoint_path=str(model_path / "model.pth"),
             vocab_path=str(model_path / "vocab.json"),
-            speaker_file_path=str(model_path / "speakers_xtts.pth"),
+            speaker_file_path=str(speaker_file_path) if is_speaker_file else "-",
             eval=True,
             strict=True,
             use_deepspeed=config.use_deepspeed,
         )
+
+        text_preprocessor = lambda text: text
+        if config.version == ModelVersion.RuIPA:
+            from omogre import Transcriptor
+
+            transcriptor = Transcriptor(data_path=self._model_dir / "omogre")
+            text_preprocessor = lambda text: " ".join(transcriptor([text]))
+
         if device == "cuda":
             impl.cuda()
         else:
             impl.cpu()
 
-        model = XTTSModel(impl, self._reference_dir)
-        self._warm_up_model(model)
+        model = XTTSModel(impl, text_preprocessor, self._reference_dir)
+        if is_speaker_file:
+            self._warm_up_model(model)
 
         return model

@@ -21,12 +21,12 @@ conflicts = [[
 [[manifest.dependency-metadata]]
 name = "coqui-tts"
 version = "0.1.0"
-requires-dist = ["anyascii>=0.3.0", "matplotlib>=3.8.4", "coqui-tts-trainer>=0.2.0,<0.3.0", "coqpit-config>=0.2.0,<0.3.0", "gruut[de,es,fr]>=2.4.0", "transformers>=4.47.0", "num2words>=0.5.14", "spacy[ja]>=3.8,<4", "deepspeed==0.16.7"]
+requires-dist = ["anyascii>=0.3.0", "matplotlib>=3.8.4", "coqui-tts-trainer>=0.2.0,<0.3.0", "coqpit-config>=0.2.0,<0.3.0", "gruut>=2.4.0", "transformers>=4.47.0", "num2words>=0.5.14", "spacy>=3.8,<4", "deepspeed==0.16.7"]
 
 [[manifest.dependency-metadata]]
 name = "fish-speech"
 version = "0.1.0"
-requires-dist = ["huggingface-hub==0.30.1", "transformers>=4.47.0", "natsort>=8.4.0", "lightning>=2.1.0", "rich>=13.5.3", "tiktoken>=0.8.0", "einops>=0.7.0", "loralib>=0.1.2", "vector-quantize-pytorch==1.14.24"]
+requires-dist = ["transformers>=4.47.0", "natsort>=8.4.0", "lightning>=2.1.0", "rich>=13.5.3", "tiktoken>=0.8.0", "einops>=0.7.0", "loralib>=0.1.2", "vector-quantize-pytorch==1.14.24"]
 
 [[package]]
 name = "absl-py"
@@ -437,10 +437,10 @@ dependencies = [
     { name = "coqpit-config" },
     { name = "coqui-tts-trainer" },
     { name = "deepspeed" },
-    { name = "gruut", extra = ["de", "es", "fr"] },
+    { name = "gruut" },
     { name = "matplotlib" },
     { name = "num2words" },
-    { name = "spacy", extra = ["ja"] },
+    { name = "spacy" },
     { name = "transformers" },
 ]
 
@@ -636,7 +636,6 @@ version = "0.1.0"
 source = { git = "https://github.com/fishaudio/fish-speech?rev=d9f9f148815cf7f7f5d3690b785f4c1273910097#d9f9f148815cf7f7f5d3690b785f4c1273910097" }
 dependencies = [
     { name = "einops" },
-    { name = "huggingface-hub" },
     { name = "lightning" },
     { name = "loralib" },
     { name = "natsort" },
@@ -857,17 +856,6 @@ dependencies = [
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fc/e1/6b5a01ef36b5341d5d0899401e4413594dfaa21f86cfc05be8efb25baf81/gruut-2.4.0.tar.gz", hash = "sha256:a49f693266a3a1ab5a6bde77a8f560ef27712b4169b5a6b02e6a1a873342e19e", size = 85341 }
 
-[package.optional-dependencies]
-de = [
-    { name = "gruut-lang-de" },
-]
-es = [
-    { name = "gruut-lang-es" },
-]
-fr = [
-    { name = "gruut-lang-fr" },
-]
-
 [[package]]
 name = "gruut-ipa"
 version = "0.13.0"
@@ -875,28 +863,10 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/51/9f/7eff478e38913cc9930527ff40c9ebcb04744dfcd0ddd43bd5a1eb9565b7/gruut-ipa-0.13.0.tar.gz", hash = "sha256:71776eb99f46e119ab14d3d4e536f54317133607cc2f6bad9711ab51f1bec66e", size = 101592 }
 
 [[package]]
-name = "gruut-lang-de"
-version = "2.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/32/86/28dc11eeb85aa9f27007afbdf982b6a7a6a5f5b8b371e0a01f71d4e9b4bb/gruut_lang_de-2.0.1.tar.gz", hash = "sha256:483ea98e094fcb5fe7191b6b8679cdf2fec85b3ec7f867a492d48fb0b7b415c0", size = 18090711 }
-
-[[package]]
 name = "gruut-lang-en"
 version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a4/e3/22748996c573c6a7d5326ef0292956afac089c73f14e3dfee0a94661e631/gruut_lang_en-2.0.1.tar.gz", hash = "sha256:a3d748bca5b31bf89d26b00ba76809532187696ce3ddf76b35889fe25f94ea30", size = 15275367 }
-
-[[package]]
-name = "gruut-lang-es"
-version = "2.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/44/ff/c45aa055988d327c3e1240451c0c35bfefe8f0ea6f92e4fd6192785f246d/gruut_lang_es-2.0.1.tar.gz", hash = "sha256:f872b373c512865097a89a8308c4ef99b958ae5bb9b006471bf00342f94182f3", size = 31404375 }
-
-[[package]]
-name = "gruut-lang-fr"
-version = "2.0.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/79/c0/57aaaff7db6db61d1fac5d2fc0955ba03bea812c8de002233a2a8752d64f/gruut_lang_fr-2.0.2.tar.gz", hash = "sha256:d2de9fc2f92ede277cb6dfe72afdba1b902d329b3cc1f1c706e66b31f0d436bd", size = 10934282 }
 
 [[package]]
 name = "h11"
@@ -2022,6 +1992,20 @@ wheels = [
 ]
 
 [[package]]
+name = "omogre"
+version = "0.1.0"
+source = { git = "https://github.com/omogr/omogre.git#0ce864261d7e3fec3fcd774bce654ba1289a62e1" }
+dependencies = [
+    { name = "numpy" },
+    { name = "requests" },
+    { name = "torch", version = "2.5.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-9-speechlab-cpu') or (platform_machine != 'aarch64' and extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu') or (sys_platform == 'darwin' and extra == 'extra-9-speechlab-cpu') or (sys_platform != 'linux' and extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu')" },
+    { name = "torch", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu') or (extra != 'extra-9-speechlab-cpu' and extra != 'extra-9-speechlab-gpu')" },
+    { name = "torch", version = "2.5.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(platform_machine != 'aarch64' and sys_platform == 'linux' and extra == 'extra-9-speechlab-cpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-9-speechlab-cpu') or (sys_platform == 'darwin' and extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu') or (sys_platform == 'linux' and extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu')" },
+    { name = "torch", version = "2.5.1+cu121", source = { registry = "https://download.pytorch.org/whl/cu121" }, marker = "extra == 'extra-9-speechlab-gpu'" },
+    { name = "tqdm" },
+]
+
+[[package]]
 name = "onnx"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3019,12 +3003,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/85/efec3c8047014223399b66dfa44ac0b616b46be083947bd67be15f52a78a/spacy-3.8.5-cp312-cp312-win_amd64.whl", hash = "sha256:4a54587deda8ecea5ceb3d9f81bd40228d8a3c7bda4bc5fd06f7cf3364da8bd9", size = 11793483 },
 ]
 
-[package.optional-dependencies]
-ja = [
-    { name = "sudachidict-core" },
-    { name = "sudachipy" },
-]
-
 [[package]]
 name = "spacy-legacy"
 version = "3.0.12"
@@ -3065,10 +3043,12 @@ develop = [
     { name = "coqui-tts" },
     { name = "fish-speech" },
     { name = "gradio" },
+    { name = "huggingface-hub" },
     { name = "hydra-core" },
     { name = "librosa" },
     { name = "numpy" },
     { name = "omegaconf" },
+    { name = "omogre" },
     { name = "onnx" },
     { name = "onnxruntime-gpu" },
     { name = "requests" },
@@ -3086,10 +3066,12 @@ docker = [
     { name = "coqui-tts" },
     { name = "fish-speech" },
     { name = "gradio" },
+    { name = "huggingface-hub" },
     { name = "hydra-core" },
     { name = "librosa" },
     { name = "numpy" },
     { name = "omegaconf" },
+    { name = "omogre" },
     { name = "requests" },
     { name = "runorm" },
     { name = "tqdm" },
@@ -3116,6 +3098,7 @@ ru-norm = [
 server = [
     { name = "click" },
     { name = "gradio" },
+    { name = "huggingface-hub" },
     { name = "librosa" },
     { name = "numpy" },
     { name = "requests" },
@@ -3127,6 +3110,7 @@ tensorrt = [
 ]
 xtts = [
     { name = "coqui-tts" },
+    { name = "omogre" },
 ]
 
 [package.dev-dependencies]
@@ -3141,18 +3125,20 @@ requires-dist = [
     { name = "coqui-tts", marker = "extra == 'xtts'", git = "https://github.com/idiap/coqui-ai-TTS?rev=97e4deb58c86dfa222e90af36cf9f2d88dfbcf17" },
     { name = "fish-speech", marker = "extra == 'fish-speech'", git = "https://github.com/fishaudio/fish-speech?rev=d9f9f148815cf7f7f5d3690b785f4c1273910097" },
     { name = "gradio", marker = "extra == 'server'", specifier = "==5.29.0" },
+    { name = "huggingface-hub", marker = "extra == 'server'", specifier = "==0.30.1" },
     { name = "hydra-core", marker = "extra == 'pytorch'", specifier = "==1.3.2" },
     { name = "librosa", marker = "extra == 'server'", specifier = "==0.11.0" },
     { name = "loguru", specifier = "==0.7.3" },
     { name = "numpy", marker = "extra == 'server'", specifier = "==2.1.3" },
     { name = "omegaconf", marker = "extra == 'pytorch'", specifier = "==2.3.0" },
+    { name = "omogre", marker = "extra == 'xtts'", git = "https://github.com/omogr/omogre.git" },
     { name = "onnx", marker = "extra == 'onnx'", specifier = "==1.17.0" },
     { name = "onnxruntime-gpu", marker = "extra == 'onnx'", specifier = "==1.21.0" },
     { name = "ormsgpack", specifier = ">=1.9.0" },
     { name = "pycuda", marker = "extra == 'tensorrt'", specifier = "==2025.1" },
     { name = "pydantic", specifier = "==2.10.6" },
     { name = "pyzmq", specifier = "==26.3.0" },
-    { name = "requests", marker = "extra == 'server'", specifier = ">=2.32.3" },
+    { name = "requests", marker = "extra == 'server'", specifier = "==2.32.3" },
     { name = "runorm", marker = "extra == 'ru-norm'", specifier = "==1.1" },
     { name = "speechlab", extras = ["gpu", "onnx", "pytorch", "server", "fish-speech", "xtts", "ru-norm"], marker = "extra == 'develop'" },
     { name = "speechlab", extras = ["pytorch", "server", "fish-speech", "xtts", "ru-norm"], marker = "extra == 'docker'" },
@@ -3161,7 +3147,7 @@ requires-dist = [
     { name = "torch", marker = "extra == 'gpu'", specifier = "==2.5.1", index = "https://download.pytorch.org/whl/cu121", conflict = { package = "speechlab", extra = "gpu" } },
     { name = "torchaudio", marker = "extra == 'cpu'", specifier = "==2.5.1" },
     { name = "torchaudio", marker = "extra == 'gpu'", specifier = "==2.5.1" },
-    { name = "tqdm", marker = "extra == 'server'", specifier = ">=4.67.1" },
+    { name = "tqdm", marker = "extra == 'server'", specifier = "==4.67.1" },
     { name = "triton", marker = "extra == 'gpu'", specifier = "==3.1.0" },
 ]
 provides-extras = ["cpu", "gpu", "onnx", "tensorrt", "pytorch", "server", "fish-speech", "xtts", "ru-norm", "docker", "develop"]
@@ -3221,32 +3207,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ce/20/08dfcd9c983f6a6f4a1000d934b9e6d626cff8d2eeb77a89a68eef20a2b7/starlette-0.46.2.tar.gz", hash = "sha256:7f7361f34eed179294600af672f565727419830b54b7b084efe44bb82d2fccd5", size = 2580846 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8b/0c/9d30a4ebeb6db2b25a841afbb80f6ef9a854fc3b41be131d249a977b4959/starlette-0.46.2-py3-none-any.whl", hash = "sha256:595633ce89f8ffa71a015caed34a5b2dc1c0cdb3f0f1fbd1e69339cf2abeec35", size = 72037 },
-]
-
-[[package]]
-name = "sudachidict-core"
-version = "20250129"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "sudachipy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/3f/aafaa68ad5d5a15b134bcd0ceb315efddbf2d66fdc425e8e7d9270069245/SudachiDict-core-20250129.tar.gz", hash = "sha256:5a8f21e516de0f66e9ef9a5a217398b14ab5d02ecf5dd4cb113b4ee85a0f3ce6", size = 9013 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/26/88198636c93ae3ea04f9773603985db956636696e8968be4f4dd35693550/SudachiDict_core-20250129-py3-none-any.whl", hash = "sha256:572b25aa9754fc23410984f895cfbcb154ccb09691fbb6361834671edccdd5eb", size = 72077888 },
-]
-
-[[package]]
-name = "sudachipy"
-version = "0.6.10"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/86/eb/ceadfb1e9178332839a75b91393765b135ab870fad9230d47c201c931607/sudachipy-0.6.10.tar.gz", hash = "sha256:b8910a4610de98b2c3cb6dc3362fea93e3ba5059f1eb445a68baa9585278f31b", size = 71518686 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/2e/3694b72d52ee6d3c0a55d88f84ea34536acfb6c49a089c346fee83a2f8ef/SudachiPy-0.6.10-cp311-cp311-macosx_10_12_universal2.whl", hash = "sha256:e947d907542c8086b7e6d18669f45599b3964eec4e954ad7dd85e4acdaa94793", size = 3050763 },
-    { url = "https://files.pythonhosted.org/packages/e7/df/d5d4792456441d28232655aa2494bded6942257c17d61f161af23bb6ee1b/SudachiPy-0.6.10-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5e1c1d8c579cc3af591a6511bffba9f88662eedf5ba32868ca8e3ba3c1051d60", size = 1732671 },
-    { url = "https://files.pythonhosted.org/packages/79/34/ace16ae26b067ae1a0d69e4294c18203f903739f73e6655c555be51a7884/SudachiPy-0.6.10-cp311-cp311-win_amd64.whl", hash = "sha256:8af8b3c91a9aaf0f300901967f85805d73e83297da6c56db50002dde3a4514fe", size = 1378217 },
-    { url = "https://files.pythonhosted.org/packages/3d/82/3d330442ab967417440a3875654698b7091a24a2f0f50fe777461f168356/SudachiPy-0.6.10-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:efb43fb3b46696ca4510b7dd4c3e490de8dbb7950d7172140dc27a4e69cd5811", size = 3041078 },
-    { url = "https://files.pythonhosted.org/packages/ad/30/93bf06bec9db46bef29e57bebb94db10a4726a8563bdaba6c9e086f067cd/SudachiPy-0.6.10-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0f8fd0ce37961401c9bdd78c126b2119a0a1669d376feb0b2427c35894ef1428", size = 1731213 },
-    { url = "https://files.pythonhosted.org/packages/7f/6f/8155e6dd268a582fc3b8db3caa3e83589bdf68d9b0a9f67a78436055206d/SudachiPy-0.6.10-cp312-cp312-win_amd64.whl", hash = "sha256:4a79b92b0776613481481c1ed0d2e92994b233ed5d29aa365789a1ba521de0a4", size = 1379214 },
 ]
 
 [[package]]
