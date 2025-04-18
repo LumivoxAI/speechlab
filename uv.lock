@@ -2988,6 +2988,7 @@ develop = [
     { name = "onnxruntime-gpu" },
     { name = "requests" },
     { name = "runorm" },
+    { name = "tomlkit" },
     { name = "torch", version = "2.5.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-9-speechlab-cpu') or (platform_machine != 'aarch64' and extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu') or (sys_platform == 'darwin' and extra == 'extra-9-speechlab-cpu') or (sys_platform != 'linux' and extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu')" },
     { name = "torch", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu') or (extra != 'extra-9-speechlab-cpu' and extra != 'extra-9-speechlab-gpu')" },
     { name = "torch", version = "2.5.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(platform_machine != 'aarch64' and sys_platform == 'linux' and extra == 'extra-9-speechlab-cpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-9-speechlab-cpu') or (sys_platform == 'darwin' and extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu') or (sys_platform == 'linux' and extra == 'extra-9-speechlab-cpu' and extra == 'extra-9-speechlab-gpu')" },
@@ -3009,6 +3010,7 @@ docker = [
     { name = "omogre" },
     { name = "requests" },
     { name = "runorm" },
+    { name = "tomlkit" },
     { name = "tqdm" },
 ]
 fish-speech = [
@@ -3037,6 +3039,7 @@ server = [
     { name = "librosa" },
     { name = "numpy" },
     { name = "requests" },
+    { name = "tomlkit" },
     { name = "tqdm" },
 ]
 tensorrt = [
@@ -3078,6 +3081,7 @@ requires-dist = [
     { name = "speechlab", extras = ["gpu", "onnx", "pytorch", "server", "fish-speech", "xtts", "ru-norm"], marker = "extra == 'develop'" },
     { name = "speechlab", extras = ["pytorch", "server", "fish-speech", "xtts", "ru-norm"], marker = "extra == 'docker'" },
     { name = "tensorrt", marker = "extra == 'tensorrt'", specifier = "==10.9.0.34" },
+    { name = "tomlkit", marker = "extra == 'server'", specifier = "==0.13.2" },
     { name = "torch", marker = "extra == 'cpu'", specifier = "==2.5.1", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "speechlab", extra = "cpu" } },
     { name = "torch", marker = "extra == 'gpu'", specifier = "==2.5.1", index = "https://download.pytorch.org/whl/cu121", conflict = { package = "speechlab", extra = "gpu" } },
     { name = "torchaudio", marker = "extra == 'cpu'", specifier = "==2.5.1" },

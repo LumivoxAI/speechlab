@@ -42,7 +42,7 @@ class XTTSRequest(BaseMessage):
     repetition_penalty: Annotated[
         float,
         Field(
-            ge=1.0,
+            ge=2.0,
             le=10.0,
             description="Штраф за повторения для декодера, помогает уменьшить длинные паузы или 'ээээ'.",
         ),

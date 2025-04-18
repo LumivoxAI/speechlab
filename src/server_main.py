@@ -36,7 +36,7 @@ class XTTS:
 
         return XTTSConfig(
             device=DeviceOption.CUDA,
-            version=ModelVersion.RuIPA,
+            version=ModelVersion.MULTILINGUAL,
             use_deepspeed=False,
         )
 

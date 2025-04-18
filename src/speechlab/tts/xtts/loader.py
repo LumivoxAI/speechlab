@@ -67,7 +67,7 @@ class XTTSModelLoader:
         )
 
         text_preprocessor = lambda text: text
-        if config.version == ModelVersion.RuIPA:
+        if config.version == ModelVersion.RU_IPA:
             from omogre import Transcriptor
 
             transcriptor = Transcriptor(data_path=self._model_dir / "omogre")

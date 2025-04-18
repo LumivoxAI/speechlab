@@ -1,7 +1,9 @@
 from enum import StrEnum
 from typing import Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
+
+from ...transport.config import BaseConfig
 
 
 class DeviceOption(StrEnum):
@@ -13,7 +15,7 @@ class ModelOption(StrEnum):
     RNNT_V2 = "v2_rnnt"
 
 
-class GigaAMConfig(BaseModel):
+class GigaAMConfig(BaseConfig):
     device: DeviceOption = DeviceOption.CUDA
     model: ModelOption = ModelOption.RNNT_V2
     half_encoder: bool = True

@@ -1,7 +1,9 @@
 from enum import StrEnum
 from typing import Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
+
+from ...transport.config import BaseConfig
 
 
 class DeviceOption(StrEnum):
@@ -15,7 +17,7 @@ class ModelSize(StrEnum):
     BIG = "big"
 
 
-class RuNormConfig(BaseModel):
+class RuNormConfig(BaseConfig):
     device: DeviceOption = DeviceOption.CUDA
     model_size: ModelSize = ModelSize.MEDIUM
 

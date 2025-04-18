@@ -1,7 +1,9 @@
 from enum import StrEnum
 from typing import Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
+
+from ...transport.config import BaseConfig
 
 
 class DeviceOption(StrEnum):
@@ -13,7 +15,7 @@ class ModelVersion(StrEnum):
     V1_5 = "1.5"
 
 
-class FishSpeechConfig(BaseModel):
+class FishSpeechConfig(BaseConfig):
     device: DeviceOption = DeviceOption.CUDA
     version: ModelVersion = ModelVersion.V1_5
     half_precision: bool = True

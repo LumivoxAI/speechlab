@@ -1,7 +1,9 @@
 from enum import StrEnum
 from typing import Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
+
+from ...transport.config import BaseConfig
 
 
 class DeviceOption(StrEnum):
@@ -10,14 +12,14 @@ class DeviceOption(StrEnum):
 
 
 class ModelVersion(StrEnum):
-    Multilingual = "coqui/XTTS-v2"
-    RuIPA = "omogr/xtts-ru-ipa"
-    Donu = "NeuroDonu/RU-XTTS-DonuModel"
+    MULTILINGUAL = "coqui/XTTS-v2"
+    RU_IPA = "omogr/xtts-ru-ipa"
+    DONU = "NeuroDonu/RU-XTTS-DonuModel"
 
 
-class XTTSConfig(BaseModel):
+class XTTSConfig(BaseConfig):
     device: DeviceOption = DeviceOption.CUDA
-    version: ModelVersion = ModelVersion.Multilingual
+    version: ModelVersion = ModelVersion.MULTILINGUAL
     use_deepspeed: bool = False
 
     @model_validator(mode="after")
