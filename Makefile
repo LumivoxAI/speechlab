@@ -18,8 +18,7 @@ docker-run:
 		-p 5502:5502 \
 		-p 5510:5510 \
 		-p 5520:5520 \
-		-v $(MAKEFILE_DIR)../model:/model \
-		-v $(MAKEFILE_DIR)../reference:/reference \
+		-v $(MAKEFILE_DIR)../data:/data \
 		$(IMAGE_NAME)
 
 docker-shell:

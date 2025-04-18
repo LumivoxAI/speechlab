@@ -16,7 +16,7 @@ class FishSpeech:
             compile=True,
         )
 
-    def run(self, model_dir: Path, reference_dir: Path) -> None:
+    def run(self, data_dir: Path) -> None:
         from speechlab.tts.server import TTSServer
         from speechlab.tts.fish_speech.model import FishSpeechModel
         from speechlab.tts.fish_speech.config import FishSpeechConfig
@@ -24,7 +24,7 @@ class FishSpeech:
         from speechlab.tts.fish_speech.handler import FishSpeechHandler
 
         config: FishSpeechConfig = self.get_config()
-        model: FishSpeechModel = FishSpeechModelLoader(model_dir, reference_dir).get_model(config)
+        model: FishSpeechModel = FishSpeechModelLoader(data_dir).get_model(config)
         handler = FishSpeechHandler(model)
         server = TTSServer(handler, "tcp://*:5501", "FishSpeech")
         server.run()
@@ -40,7 +40,7 @@ class XTTS:
             use_deepspeed=False,
         )
 
-    def run(self, model_dir: Path, reference_dir: Path) -> None:
+    def run(self, data_dir: Path) -> None:
         from speechlab.tts.server import TTSServer
         from speechlab.tts.xtts.model import XTTSModel
         from speechlab.tts.xtts.config import XTTSConfig
@@ -48,7 +48,7 @@ class XTTS:
         from speechlab.tts.xtts.handler import XTTSHandler
 
         config: XTTSConfig = self.get_config()
-        model: XTTSModel = XTTSModelLoader(model_dir, reference_dir).get_model(config)
+        model: XTTSModel = XTTSModelLoader(data_dir).get_model(config)
         handler = XTTSHandler(model)
         server = TTSServer(handler, "tcp://*:5502", "XTTS")
         server.run()
@@ -65,7 +65,7 @@ class GigaAM:
             compile=True,
         )
 
-    def run(self, model_dir: Path, reference_dir: Path) -> None:
+    def run(self, data_dir: Path) -> None:
         from speechlab.stt.server import STTServer
         from speechlab.stt.gigaam.model import GigaAMModel
         from speechlab.stt.gigaam.config import GigaAMConfig
@@ -73,7 +73,7 @@ class GigaAM:
         from speechlab.stt.gigaam.handler import STTGigaAMHandler
 
         config: GigaAMConfig = self.get_config()
-        model: GigaAMModel = GigaAMModelLoader(model_dir).get_model(config)
+        model: GigaAMModel = GigaAMModelLoader(data_dir).get_model(config)
         handler = STTGigaAMHandler(model, inactivity_timeout_ms=10 * 1000)
         server = STTServer(handler, "tcp://*:5510", "GigaAM")
         server.run()
@@ -88,7 +88,7 @@ class RuNorm:
             model_size=ModelSize.MEDIUM,
         )
 
-    def run(self, model_dir: Path, reference_dir: Path) -> None:
+    def run(self, data_dir: Path) -> None:
         from speechlab.preprocess.server import PreprocessServer
         from speechlab.preprocess.runorm.model import RuNormModel
         from speechlab.preprocess.runorm.config import RuNormConfig
@@ -96,7 +96,7 @@ class RuNorm:
         from speechlab.preprocess.runorm.handler import RuNormHandler
 
         config: RuNormConfig = self.get_config()
-        model: RuNormModel = RuNormModelLoader(model_dir).get_model(config)
+        model: RuNormModel = RuNormModelLoader(data_dir).get_model(config)
         handler = RuNormHandler(model, "RuNorm")
         server = PreprocessServer(handler, "tcp://*:5520", "RuNorm")
         server.run()
@@ -104,16 +104,13 @@ class RuNorm:
 
 @click.command()
 @click.option("--docker", default=False, help="Run in Docker mode")
-@click.option("--model_dir", default="/model", help="Path to the model directory")
-@click.option("--reference_dir", default="/reference", help="Path to the reference directory")
-def main(docker: bool, model_dir: str, reference_dir: str) -> None:
+@click.option("--data_dir", default="/data", help="Path to the data directory")
+def main(docker: bool, data_dir: str) -> None:
     if docker:
-        model_dir = Path(model_dir) / "audio"
-        reference_dir = Path(reference_dir)
+        data_dir = Path(data_dir)
     else:
         project_root = Path(__file__).resolve().parent
-        model_dir = project_root.parent.parent / "model" / "audio"
-        reference_dir = project_root.parent.parent / "reference"
+        data_dir = project_root.parent.parent / "data"
 
         src_path = str(project_root)
         if src_path not in sys.path:
@@ -125,26 +122,22 @@ def main(docker: bool, model_dir: str, reference_dir: str) -> None:
     runner.start(
         "FishSpeech",
         FishSpeech().run,
-        model_dir=model_dir,
-        reference_dir=reference_dir,
+        data_dir=data_dir,
     )
     runner.start(
         "XTTS",
         XTTS().run,
-        model_dir=model_dir,
-        reference_dir=reference_dir,
+        data_dir=data_dir,
     )
     runner.start(
         "GigaAM",
         GigaAM().run,
-        model_dir=model_dir,
-        reference_dir=reference_dir,
+        data_dir=data_dir,
     )
     runner.start(
         "RuNorm",
         RuNorm().run,
-        model_dir=model_dir,
-        reference_dir=reference_dir,
+        data_dir=data_dir,
     )
     runner.wait()
 

@@ -1,17 +1,13 @@
-import os.path
-from typing import Callable
 from pathlib import Path
-
-from runorm import RUNorm
 
 from .model import RuNormModel
 from .config import RuNormConfig
+from ...transport.loader import BaseLoader
 
 
-class RuNormModelLoader:
-    def __init__(self, model_dir: Path | str) -> None:
-        self._model_dir = Path(model_dir) / "runorm"
-        self._model_dir.mkdir(parents=True, exist_ok=True)
+class RuNormModelLoader(BaseLoader):
+    def __init__(self, data_dir: Path | str) -> None:
+        super().__init__(data_dir, "runorm")
 
     def _warm_up_model(self, model: RuNormModel) -> None:
         _ = model.preprocess("Замок на двери замка 5 мая 2024")
@@ -23,7 +19,7 @@ class RuNormModelLoader:
         model.load(
             model_size=config.model_size.value,
             device=config.device.value,
-            workdir=str(self._model_dir),
+            workdir=str(self.model_dir),
         )
 
         self._warm_up_model(model)

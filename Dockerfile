@@ -21,6 +21,6 @@ COPY src/server_main.py ./
 
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-VOLUME [ "/models", "/reference" ]
+VOLUME ["/data"]
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["--docker", "True", "--model_dir", "/model", "--reference_dir", "/reference"]
+CMD ["--docker", "True", "--data_dir", "/data"]

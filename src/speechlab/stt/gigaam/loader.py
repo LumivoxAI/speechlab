@@ -8,14 +8,15 @@ from .model import GigaAMModel
 from .config import GigaAMConfig
 from ...utils.audio import generate_warmup_audio_f32n
 from ...utils.download import download_file
+from ...transport.loader import BaseLoader
 from .mel_spectrogram.torch import MelSpectrogram
 
 _URL_BASE = "https://cdn.chatwm.opensmodel.sberdevices.ru/GigaAM"
 
 
-class GigaAMModelLoader:
-    def __init__(self, models_dir: Path | str) -> None:
-        self._root_dir = Path(models_dir) / "gigaam"
+class GigaAMModelLoader(BaseLoader):
+    def __init__(self, data_dir: Path | str) -> None:
+        super().__init__(data_dir, "gigaam")
         self._hashes = {
             "v2_rnnt.ckpt": "3d5674d8b59813d455e34c8ce1c5a7ca4da63fa0f32bcd32b1c37a1224d17b8b",
         }
@@ -23,7 +24,7 @@ class GigaAMModelLoader:
     def _download(self, model_name: str) -> Path:
         model_file_name = model_name + ".ckpt"
         model_url = f"{_URL_BASE}/{model_file_name}"
-        model_path = self._root_dir / model_file_name
+        model_path = self.model_dir / model_file_name
         download_file(model_url, model_path, self._hashes[model_file_name])
 
         return model_path

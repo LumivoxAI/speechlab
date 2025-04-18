@@ -7,15 +7,15 @@ from TTS.tts.configs.xtts_config import XttsConfig
 
 from .model import XTTSModel
 from .config import XTTSConfig, ModelVersion
+from ...transport.loader import BaseLoader
 
 
-class XTTSModelLoader:
-    def __init__(self, model_dir: Path | str, reference_dir: Path | str) -> None:
-        self._model_dir = Path(model_dir) / "xtts"
-        self._reference_dir = Path(reference_dir) / "fish_speech"
+class XTTSModelLoader(BaseLoader):
+    def __init__(self, data_dir: Path | str) -> None:
+        super().__init__(data_dir, "xtts")
 
     def _download(self, version: ModelVersion) -> Path:
-        local_dir = self._model_dir / version.name
+        local_dir = self.model_dir / version.name
         local_dir.mkdir(parents=True, exist_ok=True)
         model_path = snapshot_download(
             repo_id=version.value,
@@ -70,7 +70,7 @@ class XTTSModelLoader:
         if config.version == ModelVersion.RU_IPA:
             from omogre import Transcriptor
 
-            transcriptor = Transcriptor(data_path=self._model_dir / "omogre")
+            transcriptor = Transcriptor(data_path=self.model_dir / "omogre")
             text_preprocessor = lambda text: " ".join(transcriptor([text]))
 
         if device == "cuda":
@@ -78,7 +78,7 @@ class XTTSModelLoader:
         else:
             impl.cpu()
 
-        model = XTTSModel(impl, text_preprocessor, self._reference_dir)
+        model = XTTSModel(impl, text_preprocessor, self.reference_dir)
         if is_speaker_file:
             self._warm_up_model(model)
 
