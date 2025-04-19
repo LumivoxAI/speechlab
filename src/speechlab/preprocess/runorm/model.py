@@ -27,16 +27,22 @@ class RuNormModel(RUNorm, BaseModel):
             self.paths[model_size], cache_dir=self.workdir
         )
         self.abbr_model = T5ForConditionalGeneration.from_pretrained(
-            self.paths[model_size], cache_dir=self.workdir
+            self.paths[model_size],
+            cache_dir=self.workdir,
+            weights_only=False,
         )
         self.angl_tokenizer = AutoTokenizer.from_pretrained(
             self.paths["kirillizator"], cache_dir=self.workdir
         )
         self.angl_model = T5ForConditionalGeneration.from_pretrained(
-            self.paths["kirillizator"], cache_dir=self.workdir
+            self.paths["kirillizator"],
+            cache_dir=self.workdir,
+            weights_only=False,
         )
         self.tagger_model = BertForTokenClassification.from_pretrained(
-            self.paths["tagger"], cache_dir=self.workdir
+            self.paths["tagger"],
+            cache_dir=self.workdir,
+            weights_only=False,
         )
         self.tagger_tokenizer = AutoTokenizer.from_pretrained(
             self.paths["tagger"], cache_dir=self.workdir

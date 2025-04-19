@@ -123,7 +123,7 @@ explicit = true
 name = "fish-speech"
 version = "0.1.0" # rev = "d9f9f1", master after 1.5.0
 requires-dist = [
-    "transformers>=4.47.0",
+    "transformers==4.51.3",
     "natsort>=8.4.0",
     "lightning>=2.1.0",
     "rich>=13.5.3",

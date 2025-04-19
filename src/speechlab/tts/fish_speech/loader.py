@@ -17,7 +17,7 @@ from ...transport.loader import BaseLoader
 
 class FishSpeechModelLoader(BaseLoader[FishSpeechConfig]):
     def __init__(self, data_dir: Path | str) -> None:
-        super().__init__(data_dir, "fish_speech")
+        super().__init__(FishSpeechConfig, data_dir, "fish_speech")
 
     def _download(self, model_version: str) -> Path:
         local_dir = self.model_dir / model_version

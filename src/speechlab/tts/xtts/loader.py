@@ -12,7 +12,7 @@ from ...transport.loader import BaseLoader
 
 class XTTSModelLoader(BaseLoader[XTTSConfig]):
     def __init__(self, data_dir: Path | str) -> None:
-        super().__init__(data_dir, "xtts")
+        super().__init__(XTTSConfig, data_dir, "xtts")
 
     def _download(self, version: ModelVersion) -> Path:
         local_dir = self.model_dir / version.name

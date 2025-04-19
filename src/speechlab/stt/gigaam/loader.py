@@ -16,7 +16,7 @@ _URL_BASE = "https://cdn.chatwm.opensmodel.sberdevices.ru/GigaAM"
 
 class GigaAMModelLoader(BaseLoader[GigaAMConfig]):
     def __init__(self, data_dir: Path | str) -> None:
-        super().__init__(data_dir, "gigaam")
+        super().__init__(GigaAMConfig, data_dir, "gigaam")
         self._hashes = {
             "v2_rnnt.ckpt": "3d5674d8b59813d455e34c8ce1c5a7ca4da63fa0f32bcd32b1c37a1224d17b8b",
         }
