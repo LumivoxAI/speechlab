@@ -5,10 +5,11 @@ import torch
 from torch import Tensor, nn, device, float16, autocast, inference_mode
 
 from .tokenizer import Tokenizer
+from ...transport.model import BaseModel
 from .mel_spectrogram.torch import MelSpectrogram
 
 
-class GigaAMModel(nn.Module):
+class GigaAMModel(nn.Module, BaseModel):
     def __init__(
         self,
         preprocessor: MelSpectrogram,

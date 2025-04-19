@@ -14,7 +14,7 @@ from .mel_spectrogram.torch import MelSpectrogram
 _URL_BASE = "https://cdn.chatwm.opensmodel.sberdevices.ru/GigaAM"
 
 
-class GigaAMModelLoader(BaseLoader):
+class GigaAMModelLoader(BaseLoader[GigaAMConfig]):
     def __init__(self, data_dir: Path | str) -> None:
         super().__init__(data_dir, "gigaam")
         self._hashes = {
@@ -106,7 +106,7 @@ class GigaAMModelLoader(BaseLoader):
         data = torch.tensor(generate_warmup_audio_f32n(16000, 20), dtype=model._dtype)
         model.stt(data)
 
-    def get_model(self, config: GigaAMConfig) -> GigaAMModel:
+    def from_config(self, config: GigaAMConfig) -> GigaAMModel:
         GigaAMConfig.model_validate(config)
 
         if not hydra.__version__.startswith("1.3"):

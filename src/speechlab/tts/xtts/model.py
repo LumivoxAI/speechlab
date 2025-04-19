@@ -6,6 +6,8 @@ import torch
 from numpy import ndarray
 from TTS.tts.models.xtts import Xtts
 
+from ...transport.model import BaseModel
+
 AUDIO_EXTENSIONS = {
     ".mp3",
     ".wav",
@@ -20,8 +22,10 @@ AUDIO_EXTENSIONS = {
 }
 
 
-class XTTSModel:
+class XTTSModel(BaseModel):
     def __init__(self, impl: Xtts, text_preprocessor: Callable, reference_dir: Path) -> None:
+        super().__init__()
+
         self._impl = impl
         self._reference_dir = reference_dir
         self._text_preprocessor = text_preprocessor

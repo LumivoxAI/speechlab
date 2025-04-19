@@ -15,7 +15,7 @@ from .audio_manager import AudioManager
 from ...transport.loader import BaseLoader
 
 
-class FishSpeechModelLoader(BaseLoader):
+class FishSpeechModelLoader(BaseLoader[FishSpeechConfig]):
     def __init__(self, data_dir: Path | str) -> None:
         super().__init__(data_dir, "fish_speech")
 
@@ -89,7 +89,7 @@ class FishSpeechModelLoader(BaseLoader):
     def _warm_up_model(self, model: FishSpeechModel) -> None:
         _ = list(model.tts("Привет, мир!"))
 
-    def get_model(self, config: FishSpeechConfig) -> FishSpeechModel:
+    def from_config(self, config: FishSpeechConfig) -> FishSpeechModel:
         FishSpeechConfig.model_validate(config)
         device = config.device.value
 

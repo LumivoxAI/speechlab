@@ -5,14 +5,14 @@ from .config import RuNormConfig
 from ...transport.loader import BaseLoader
 
 
-class RuNormModelLoader(BaseLoader):
+class RuNormModelLoader(BaseLoader[RuNormConfig]):
     def __init__(self, data_dir: Path | str) -> None:
         super().__init__(data_dir, "runorm")
 
     def _warm_up_model(self, model: RuNormModel) -> None:
         _ = model.preprocess("Замок на двери замка 5 мая 2024")
 
-    def get_model(self, config: RuNormConfig) -> RuNormModel:
+    def from_config(self, config: RuNormConfig) -> RuNormModel:
         RuNormConfig.model_validate(config)
 
         model = RuNormModel()

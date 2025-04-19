@@ -10,7 +10,7 @@ from .config import XTTSConfig, ModelVersion
 from ...transport.loader import BaseLoader
 
 
-class XTTSModelLoader(BaseLoader):
+class XTTSModelLoader(BaseLoader[XTTSConfig]):
     def __init__(self, data_dir: Path | str) -> None:
         super().__init__(data_dir, "xtts")
 
@@ -39,7 +39,7 @@ class XTTSModelLoader(BaseLoader):
             )
         )
 
-    def get_model(self, config: XTTSConfig) -> XTTSModel:
+    def from_config(self, config: XTTSConfig) -> XTTSModel:
         XTTSConfig.model_validate(config)
         device = config.device.value
 

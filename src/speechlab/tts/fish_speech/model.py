@@ -15,9 +15,10 @@ from fish_speech.models.text2semantic.inference import (
 )
 
 from .audio_manager import AudioManager
+from ...transport.model import BaseModel
 
 
-class FishSpeechModel:
+class FishSpeechModel(BaseModel):
     def __init__(
         self,
         llama: nn.Module,
@@ -25,6 +26,8 @@ class FishSpeechModel:
         decode_one_token: Callable,
         device: str | device,
     ) -> None:
+        super().__init__()
+
         self._audio_mng = audio_mng
         self._llama = llama
         self._stop_event = Event()

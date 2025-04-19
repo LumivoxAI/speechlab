@@ -3,10 +3,13 @@ import re
 from torch import inference_mode
 from runorm import RUNorm
 
+from ...transport.model import BaseModel
 
-class RuNormModel(RUNorm):
+
+class RuNormModel(RUNorm, BaseModel):
     def __init__(self) -> None:
         super().__init__()
+
         self.re_normalization = re.compile(r"[^a-zA-Z0-9\sа-яА-ЯёЁ.,!?:;" "''(){}[]«»„“”-]")
 
     def load(self, model_size: str, device: str, workdir: str) -> None:
