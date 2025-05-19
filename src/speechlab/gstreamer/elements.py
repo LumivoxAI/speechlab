@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from enum import IntEnum
+
 import gi
 import numpy as np
 
@@ -78,6 +80,61 @@ class BaseElement:
 
 
 # ---------------------------------------------------------------------------
+# PipeWire
+# ---------------------------------------------------------------------------
+
+
+class PipeWireSrc(BaseElement):
+    def __init__(
+        self,
+        target_object: str | None = None,
+        client_name: str | None = None,
+        min_buffers: int = 2,
+        max_buffers: int = 4,
+        name: str | None = None,
+    ) -> None:
+        super().__init__("pipewiresrc", name)
+
+        if min_buffers <= 0:
+            raise ValueError("min_buffers must be positive")
+        if max_buffers <= 0:
+            raise ValueError("max_buffers must be positive")
+        if min_buffers > max_buffers:
+            raise ValueError("min_buffers must be <= max_buffers")
+
+        self._make()
+
+        # pw-dump | jq '.[] | select(.type == "PipeWire:Interface:Node") | {id, serial: .info.props["object.serial"], name: .info.props["node.name"]}'
+        # node.name - optimal and stable
+        # object.serial - stable
+        # node.id - unstable
+        # None - default
+        if target_object is not None:
+            self._impl.set_property("target-object", str(target_object))
+        if client_name is not None:
+            self._impl.set_property("client-name", client_name)
+        # Set the timestamp when the buffer exits pipewiresrc
+        self._impl.set_property("do-timestamp", True)
+        # Instead of PipeWire, GStreamer handles the buffering (which is optimal for audio)
+        self._impl.set_property("use-bufferpool", False)
+
+        # Number of buffers “in flight” between PipeWire and GStreamer.
+        # Less means lower latency; more means better load tolerance.
+        self._impl.set_property("min-buffers", min_buffers)
+        self._impl.set_property("max-buffers", max_buffers)
+
+        # Metadata for WirePlumber — Proper routing and priority policies
+        props = [
+            "props",
+            "media.type=Audio",
+            "media.category=Capture",
+            "media.role=Communication",
+        ]
+
+        self._impl.set_property("stream-properties", Gst.Structure.new_from_string(",".join(props)))
+
+
+# ---------------------------------------------------------------------------
 # Audio processing
 # ---------------------------------------------------------------------------
 
@@ -131,3 +188,32 @@ class CapsFilter(BaseElement):
         ]
 
         self._impl.set_property("caps", Gst.Caps.from_string(",".join(caps)))
+
+
+# ---------------------------------------------------------------------------
+# Queue
+# ---------------------------------------------------------------------------
+
+
+class AudioQueueDropPolicy(IntEnum):
+    DISABLED = 0  # block upstream when full, no drops
+    DROP_NEW = 1  # drop new incoming buffers when full
+    DROP_OLD = 2  # drop old buffered data when full (best for real-time audio)
+
+
+class AudioQueue(BaseElement):
+    def __init__(
+        self,
+        max_size_time_ms: int = 200,
+        drop_policy: AudioQueueDropPolicy = AudioQueueDropPolicy.DROP_OLD,
+        name: str | None = None,
+    ) -> None:
+        super().__init__("queue", name)
+        if max_size_time_ms <= 0:
+            raise ValueError("max_size_time_ms must be positive")
+        self._make()
+
+        self._impl.set_property("max-size-time", _ms_to_ns(max_size_time_ms))
+        self._impl.set_property("max-size-buffers", 0)  # without buffer restrictions
+        self._impl.set_property("max-size-bytes", 0)  # without bytes restrictions
+        self._impl.set_property("leaky", int(drop_policy))
