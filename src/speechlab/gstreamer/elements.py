@@ -217,3 +217,31 @@ class AudioQueue(BaseElement):
         self._impl.set_property("max-size-buffers", 0)  # without buffer restrictions
         self._impl.set_property("max-size-bytes", 0)  # without bytes restrictions
         self._impl.set_property("leaky", int(drop_policy))
+
+
+# ---------------------------------------------------------------------------
+# AppSink
+# ---------------------------------------------------------------------------
+
+
+class AppSink(BaseElement):
+    def __init__(self, name: str | None = None) -> None:
+        super().__init__("appsink", name)
+
+        self._make()
+
+        # Pull mode (try-pull-sample)
+        self._impl.set_property("emit-signals", False)
+        # Buffer should be passed to Python as soon as it arrives.
+        self._impl.set_property("sync", False)
+        self._impl.set_property("max-buffers", 1)
+        self._impl.set_property("max-bytes", 0)
+        self._impl.set_property("max-time", 0)
+        self._impl.set_property("drop", True)
+        # Do not keep a copy of the last debug buffer
+        self._impl.set_property("enable-last-sample", False)
+        # Stop immediately
+        self._impl.set_property("wait-on-eos", False)
+
+    def try_pull(self, timeout_ms: int = 100) -> Gst.Sample | None:
+        return self._impl.emit("try-pull-sample", _ms_to_ns(timeout_ms))
