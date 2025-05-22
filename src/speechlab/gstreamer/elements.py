@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 from enum import IntEnum
 
 import gi
 import numpy as np
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst, GLib
+from gi.repository import Gst
 
 from .logger import logger
 
@@ -19,8 +17,20 @@ def _ms_to_ns(ms: int) -> int:
     return ms * 1_000_000
 
 
-def _ms_to_us(ms: int) -> int:
-    return ms * 1_000
+def _mcs_to_ns(mcs: int) -> int:
+    return mcs * 1_000
+
+
+def _ns_to_ms(ns: int) -> int:
+    return ns // 1_000_000
+
+
+def _ns_to_mcs(ns: int) -> int:
+    return ns // 1_000
+
+
+S16LE_DTYPE = np.dtype(np.int16)
+S16LE_BYTES_PER_SAMPLE = 2
 
 
 GST_FORMAT_MAP: dict[str, np.dtype] = {
@@ -225,8 +235,17 @@ class AudioQueue(BaseElement):
 
 
 class AppSink(BaseElement):
+    _MAX_MAP_FAILURES = 3
+    _MAX_INVALID_BUFFERS = 10
+
     def __init__(self, name: str | None = None) -> None:
         super().__init__("appsink", name)
+
+        self._map_fail_count = 0
+        self._invalid_buffer_count = 0
+
+        self._channels: int | None = None
+        self._frame_size: int | None = None
 
         self._make()
 
@@ -243,5 +262,70 @@ class AppSink(BaseElement):
         # Stop immediately
         self._impl.set_property("wait-on-eos", False)
 
-    def try_pull(self, timeout_ms: int = 100) -> Gst.Sample | None:
+    def try_pull_raw(self, timeout_ms: int = 100) -> Gst.Sample | None:
         return self._impl.emit("try-pull-sample", _ms_to_ns(timeout_ms))
+
+    def try_pull(self, timeout_ms: int = 100) -> tuple[np.ndarray | None, int | None]:
+        sample = self._impl.emit("try-pull-sample", _ms_to_ns(timeout_ms))
+        if sample is None:
+            return None, None
+
+        buf = sample.get_buffer()
+        if buf is None:
+            return None, None
+
+        if self._channels is None:
+            self._channels = self._get_channels_from_sample(sample)
+            self._frame_size = self._channels * S16LE_BYTES_PER_SAMPLE
+
+        ok, mapinfo = buf.map(Gst.MapFlags.READ)
+        if not ok or mapinfo is None:
+            self._map_fail_count += 1
+            if self._map_fail_count >= self._MAX_MAP_FAILURES:
+                raise RuntimeError("repeated failed to map GStreamer buffer")
+            return None, None
+        self._map_fail_count = 0
+
+        try:
+            size = mapinfo.size
+            if size == 0:
+                return None, None
+
+            if size % self._frame_size != 0:
+                self._invalid_buffer_count += 1
+                if self._invalid_buffer_count >= self._MAX_INVALID_BUFFERS:
+                    raise RuntimeError(f"repeated invalid buffer size {size}")
+                return None, None
+            self._invalid_buffer_count = 0
+
+            arr = np.frombuffer(memoryview(mapinfo.data), dtype=S16LE_DTYPE).copy()
+
+            if self._channels != 1:
+                arr = arr.reshape(-1, self._channels)
+
+            pts = buf.pts
+            if pts is not None and pts != Gst.CLOCK_TIME_NONE:
+                pts = sample.get_segment().to_running_time(Gst.Format.TIME, pts)
+            else:
+                pts = None
+
+            return arr, pts
+        finally:
+            buf.unmap(mapinfo)
+
+    @staticmethod
+    def _get_channels_from_sample(sample: Gst.Sample) -> int:
+        caps = sample.get_caps()
+        if caps is None or caps.is_empty() or caps.is_any():
+            raise RuntimeError("sample has no valid caps")
+        s = caps.get_structure(0)
+        if s is None:
+            raise RuntimeError("caps has no structure")
+
+        success, value = s.get_int("channels")
+        if not success or value <= 0:
+            raise RuntimeError(f"invalid channels value in caps")
+
+        return value
+
+
