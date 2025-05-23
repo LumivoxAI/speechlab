@@ -1,4 +1,5 @@
 from enum import IntEnum
+from typing import Self
 
 import gi
 import numpy as np
@@ -52,7 +53,7 @@ class BaseElement:
         self._name = name
         self._impl: Gst.Element | None = None
 
-    def _make(self) -> BaseElement:
+    def _make(self) -> Self:
         self._impl = Gst.ElementFactory.make(self._factory, self._name)
         if self._impl is None:
             raise RuntimeError(
@@ -61,7 +62,7 @@ class BaseElement:
             )
         return self
 
-    def link(self, next_element: BaseElement) -> BaseElement:
+    def link(self, next_element: Self) -> Self:
         if not self._impl.link(next_element._impl):
             raise RuntimeError(f"Failed to link {self} -> {next_element}")
         return next_element
@@ -171,15 +172,12 @@ class AudioResample(BaseElement):
 class CapsFilter(BaseElement):
     def __init__(
         self,
-        format: str,
         samplerate: int,
         channels: int,
         name: str | None = None,
     ) -> None:
         super().__init__("capsfilter", name)
 
-        if format not in SUPPORTED_FORMATS:
-            raise ValueError(f"Unsupported format '{format}'. Use one of: {SUPPORTED_FORMATS}")
         if samplerate <= 0:
             raise ValueError("samplerate must be positive")
         if channels <= 0:
@@ -190,8 +188,8 @@ class CapsFilter(BaseElement):
         # interleaved = [L, R, L, R, ...]
         layout = "interleaved"
         caps = [
-            f"audio/x-raw",
-            f"format={format}",
+            "audio/x-raw",
+            "format=S16LE",
             f"rate={samplerate}",
             f"channels={channels}",
             f"layout={layout}",
