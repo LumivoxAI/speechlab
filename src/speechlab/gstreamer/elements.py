@@ -327,3 +327,30 @@ class AppSink(BaseElement):
         return value
 
 
+# ---------------------------------------------------------------------------
+# Tee
+# ---------------------------------------------------------------------------
+
+
+class Tee(BaseElement):
+    def __init__(self, name: str | None = None) -> None:
+        super().__init__("tee", name)
+        self._make()
+
+    def link(self, next_element: BaseElement) -> BaseElement:
+        src_pad_template = self._impl.get_pad_template("src_%u")
+        src_pad = self._impl.request_pad(src_pad_template, None, None)
+        if src_pad is None:
+            raise RuntimeError(f"Failed to request src pad from {self}")
+
+        sink_pad = next_element.impl.get_static_pad("sink")
+        if sink_pad is None:
+            raise RuntimeError(f"Failed to get sink pad from {next_element}")
+
+        ret = src_pad.link(sink_pad)
+        if ret != Gst.PadLinkReturn.OK:
+            raise RuntimeError(f"Failed to link {self} -> {next_element}: {ret}")
+
+        return next_element
+
+
