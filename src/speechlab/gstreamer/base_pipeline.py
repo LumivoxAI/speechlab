@@ -1,72 +1,74 @@
 import threading
 from abc import ABC, abstractmethod
+from time import time_ns
 
 import gi
+import numpy as np
 
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst
 
 from .logger import logger
-from .elements import Tee, AppSrc, AppSink, BaseElement
+from .elements import Tee, AppSrc, AppSink, BaseElement, _ms_to_ns
+from .pipeline_error import PipelineError, PipelineErrorStorage
 
 Gst.init(None)
 
 
-class PipelineError(Exception):
-    pass
-
-
 class BasePipeline(ABC):
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
+        self._name = name
         self._pipeline: Gst.Pipeline | None = None
         self._bus: Gst.Bus | None = None
         self._bus_thread: threading.Thread | None = None
 
         self._stop_event = threading.Event()
-        self._error: PipelineError | None = None
-        self._error_lock = threading.Lock()
-        self._running = False
+        self._errors = PipelineErrorStorage(self._stop_event)
+        self._started = False
+        self._stopped = False
 
     # --- Public API --------------------------------------------------------
 
     def start(self) -> None:
-        if self._running:
-            raise RuntimeError("Pipeline is already running")
-
-        self._stop_event.clear()
-        self._error = None
+        if self._started:
+            raise PipelineError("pipeline is already started")
+        if self._stopped:
+            raise PipelineError("pipeline has been stopped")
 
         try:
             self._pipeline = Gst.Pipeline.new(None)
             if self._pipeline is None:
-                raise PipelineError("Failed to create GStreamer pipeline")
+                raise PipelineError("failed to create GStreamer pipeline")
 
             self._bus = self._pipeline.get_bus()
             self._build()
 
             ret = self._pipeline.set_state(Gst.State.PLAYING)
             if ret == Gst.StateChangeReturn.FAILURE:
-                raise PipelineError("Failed to set pipeline to PLAYING state")
+                raise PipelineError("failed to set pipeline to PLAYING state")
 
             self._bus_thread = threading.Thread(
                 target=self._bus_loop,
-                name=f"{self.__class__.__name__}-bus",
+                name=f"{self.name}-bus",
                 daemon=True,
             )
             self._bus_thread.start()
 
             self._on_started()
+            self._started = True
 
         except Exception:
+            self._stopped = True
             self._shutdown()
             raise
 
-        self._running = True
-        logger.info(f"{self.__class__.__name__} started")
+    @property
+    def name(self) -> str:
+        return self._name
 
     @property
-    def running(self) -> bool:
-        return self._running
+    def errors(self) -> PipelineErrorStorage:
+        return self._errors
 
     # --- Hooks -------------------------------------------------------------
 
@@ -108,11 +110,11 @@ class BasePipeline(ABC):
             for i in range(len(branch) - 1):
                 branch[i].link(branch[i + 1])
 
-    def _stop(self) -> None:
-        if not self._running:
-            return
+    def _stop(self) -> list[PipelineError]:
+        if not self._started or self._stopped:
+            return []
         self._shutdown()
-        self._check_error()
+        return self.errors.get()
 
     # --- Private ----------------------------------------------------------
 
@@ -128,12 +130,9 @@ class BasePipeline(ABC):
             if msg.type == Gst.MessageType.ERROR:
                 err, debug = msg.parse_error()
                 error = PipelineError(
-                    f"GStreamer error from '{msg.src.get_name()}': {err.message}. Debug: {debug}"
+                    f"gStreamer error from '{msg.src.get_name()}': {err.message}. Debug: {debug}"
                 )
-                logger.error(str(error))
-                with self._error_lock:
-                    self._error = error
-                self._stop_event.set()
+                self.errors.add(error)
                 self._on_eos()  # unblock anything waiting on EOS
                 break
 
@@ -144,12 +143,12 @@ class BasePipeline(ABC):
                 )
 
             elif msg.type == Gst.MessageType.EOS:
-                logger.info(f"{self.__class__.__name__} received EOS")
+                logger.info(f"{self.name} received EOS")
                 self._stop_event.set()
                 self._on_eos()
                 break
 
-        logger.debug(f"{self.__class__.__name__} bus thread exiting")
+        logger.debug(f"{self.name} bus thread exiting")
 
     def _shutdown(self) -> None:
         self._stop_event.set()
@@ -159,20 +158,17 @@ class BasePipeline(ABC):
         if self._bus_thread is not None:
             self._bus_thread.join(timeout=2.0)
             if self._bus_thread.is_alive():
-                logger.warning(f"{self.__class__.__name__} bus thread did not exit in time")
+                logger.warning(f"{self.name} bus thread did not exit in time")
             self._bus_thread = None
 
         if self._pipeline is not None:
             ret = self._pipeline.set_state(Gst.State.NULL)
             if ret == Gst.StateChangeReturn.FAILURE:
-                logger.warning(f"{self.__class__.__name__} failed to set pipeline to NULL state")
+                logger.warning(f"{self.name} failed to set pipeline to NULL state")
             self._pipeline = None
 
         self._bus = None
-        self._running = False
-        logger.info(f"{self.__class__.__name__} stopped")
+        self._started = False
+        self._stopped = True
 
-    def _check_error(self) -> None:
-        with self._error_lock:
-            if self._error is not None:
-                raise self._error
+
