@@ -1,6 +1,6 @@
-import threading
 from abc import ABC, abstractmethod
 from time import time_ns
+from threading import Event
 
 import gi
 import numpy as np
@@ -11,6 +11,7 @@ from gi.repository import Gst
 from .logger import logger
 from .elements import Tee, AppSrc, AppSink, BaseElement, _ms_to_ns
 from .pipeline_error import PipelineError, PipelineErrorStorage
+from .pipeline_thread import PipelineThreadStorage
 
 Gst.init(None)
 
@@ -20,10 +21,15 @@ class BasePipeline(ABC):
         self._name = name
         self._pipeline: Gst.Pipeline | None = None
         self._bus: Gst.Bus | None = None
-        self._bus_thread: threading.Thread | None = None
 
-        self._stop_event = threading.Event()
+        self._stop_event = Event()
         self._errors = PipelineErrorStorage(self._stop_event)
+        self._threads = PipelineThreadStorage(
+            name,
+            self._stop_event,
+            self._errors,
+            logger,
+        )
         self._started = False
         self._stopped = False
 
@@ -47,12 +53,7 @@ class BasePipeline(ABC):
             if ret == Gst.StateChangeReturn.FAILURE:
                 raise PipelineError("failed to set pipeline to PLAYING state")
 
-            self._bus_thread = threading.Thread(
-                target=self._bus_loop,
-                name=f"{self.name}-bus",
-                daemon=True,
-            )
-            self._bus_thread.start()
+            self.threads.add("bus", self._bus_loop)
 
             self._on_started()
             self._started = True
@@ -70,6 +71,10 @@ class BasePipeline(ABC):
     def errors(self) -> PipelineErrorStorage:
         return self._errors
 
+    @property
+    def threads(self) -> PipelineThreadStorage:
+        return self._threads
+
     # --- Hooks -------------------------------------------------------------
 
     @abstractmethod
@@ -82,9 +87,6 @@ class BasePipeline(ABC):
 
     def _on_eos(self) -> None:
         """Called when EOS is received on the bus."""
-
-    def _before_shutdown(self) -> None:
-        """Called at the start of _shutdown(), before threads are joined."""
 
     # --- Protected API -----------------------------------------------------
 
@@ -118,8 +120,8 @@ class BasePipeline(ABC):
 
     # --- Private ----------------------------------------------------------
 
-    def _bus_loop(self) -> None:
-        while not self._stop_event.is_set():
+    def _bus_loop(self, stop_event: Event) -> None:
+        while not stop_event.is_set():
             msg = self._bus.timed_pop_filtered(
                 100 * Gst.MSECOND,
                 Gst.MessageType.ERROR | Gst.MessageType.WARNING | Gst.MessageType.EOS,
@@ -144,7 +146,7 @@ class BasePipeline(ABC):
 
             elif msg.type == Gst.MessageType.EOS:
                 logger.info(f"{self.name} received EOS")
-                self._stop_event.set()
+                stop_event.set()
                 self._on_eos()
                 break
 
@@ -152,14 +154,7 @@ class BasePipeline(ABC):
 
     def _shutdown(self) -> None:
         self._stop_event.set()
-
-        self._before_shutdown()
-
-        if self._bus_thread is not None:
-            self._bus_thread.join(timeout=2.0)
-            if self._bus_thread.is_alive():
-                logger.warning(f"{self.name} bus thread did not exit in time")
-            self._bus_thread = None
+        self.threads.stop()
 
         if self._pipeline is not None:
             ret = self._pipeline.set_state(Gst.State.NULL)
