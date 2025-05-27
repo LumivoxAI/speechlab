@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from time import time_ns
 from threading import Event
+from collections.abc import Callable, Generator
 
 import gi
 import numpy as np
@@ -165,5 +166,47 @@ class BasePipeline(ABC):
         self._bus = None
         self._started = False
         self._stopped = True
+
+
+# ---------------------------------------------------------------------------
+# Capture
+# ---------------------------------------------------------------------------
+
+
+SamplesIterator = Generator[tuple[np.ndarray, int], None, None]
+SamplesHandler = Callable[[SamplesIterator], None]
+
+
+class BaseCapturePipeline(BasePipeline):
+    def __init__(self, name: str, handler: SamplesHandler) -> None:
+        super().__init__(name)
+
+        self._handler = handler
+
+    def stop(self) -> None:
+        self._stop()
+
+    @abstractmethod
+    def _get_appsink(self) -> AppSink: ...
+
+    def _on_started(self) -> None:
+        self.threads.add("poll", self._poll_loop)
+
+    def _poll_loop(self, stop_event: Event) -> None:
+        def _samples() -> SamplesIterator:
+            appsink = self._get_appsink()
+            pimpl = self._pipeline
+
+            while not stop_event.is_set():
+                arr, pts = appsink.try_pull(timeout_ms=100)
+                if arr is not None:
+                    if pts is not None:
+                        dt_ns = pimpl.get_clock().get_time() - pimpl.get_base_time() - pts
+                        captured_at_ns = time_ns() - dt_ns
+                    else:
+                        captured_at_ns = time_ns() - _ms_to_ns(1)
+                    yield arr, captured_at_ns
+
+        self._handler(_samples())
 
 
