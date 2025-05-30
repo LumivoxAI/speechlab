@@ -14,17 +14,17 @@ class SileroModelLoader(BaseLoader[SileroConfig]):
         super().__init__(SileroConfig, data_dir, "silero_vad")
 
         self._hashes = {
-            ModelVersion.V6_0: {
-                TORCH_FILE_NAME: "b178b4bc39467ecd5e9eb0bc6f2fcc291c1cc1cc55a68fea8c0c2c0d5fbbe66c",
-                ONNX_FILE_NAME: None,
+            ModelVersion.V6_2_1: {
+                TORCH_FILE_NAME: "e1122837f4154c511485fe0b9c64455f7b929c96fbb8d79fbdb336383ebd3720",
+                ONNX_FILE_NAME: "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
             },
             ModelVersion.V5_1_2: {
                 TORCH_FILE_NAME: "85c48e1f0ecb604e5d2a268f3ccfb912d4f7e935acdc86af5a3fc5b0aea7b29a",
-                ONNX_FILE_NAME: None,
+                ONNX_FILE_NAME: "2623a2953f6ff3d2c1e61740c6cdb7168133479b267dfef114a4a3cc5bdd788f",
             },
             ModelVersion.V4_0: {
                 TORCH_FILE_NAME: "082e21870cf7722b0c7fa5228eaed579efb6870df81192b79bed3f7bac2f738a",
-                ONNX_FILE_NAME: None,
+                ONNX_FILE_NAME: "a35ebf52fd3ce5f1469b2a36158dba761bc47b973ea3382b3186ca15b1f5af28",
             },
         }
 
@@ -40,12 +40,18 @@ class SileroModelLoader(BaseLoader[SileroConfig]):
         return model_path
 
     def from_config(self, config: SileroConfig) -> SileroModel:
-        SileroConfig.model_validate(config)
+        config = SileroConfig.model_validate(config)
         model_path = self._download(config)
+        device = config.device
 
-        if config.device.is_torch:
+        if device.is_torch:
             from .torch_model import SileroTorchModel
 
-            return SileroTorchModel.load(model_path, config.device.torch_device_name)
+            return SileroTorchModel.load(model_path, device.torch_device_name)
 
-        raise NotImplementedError
+        if device.is_onnx:
+            from .onnx_model import SileroOnnxModel
+
+            return SileroOnnxModel.load(model_path, device)
+
+        raise ValueError(f"Unsupported device: {device}")
