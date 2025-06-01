@@ -8,7 +8,7 @@ SAMPLE_RATE = 16000
 WINDOW_SIZE = 512
 
 
-def validate_chunked_pcm16(data: np.ndarray) -> np.ndarray:
+def validate_chunked_pcm16(data: np.ndarray) -> None:
     if not isinstance(data, np.ndarray):
         raise TypeError("Input data must be a numpy array")
     if data.dtype != np.int16:
@@ -17,8 +17,6 @@ def validate_chunked_pcm16(data: np.ndarray) -> np.ndarray:
         raise ValueError("Input data must be a one-dimensional PCM16 array")
     if data.shape[0] % WINDOW_SIZE != 0:
         raise ValueError(f"Input data length must be a multiple of {WINDOW_SIZE}")
-
-    return data
 
 
 class SileroModel(BaseModel):
